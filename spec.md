@@ -66,7 +66,7 @@ stateDiagram-v2
     received --> received: update details
     received --> reportable: triage actively_exploited + aware_at + reason
     received --> closed_na: triage not_actively_exploited or invalid + reason
-    reportable --> reportable: update details, aware_at, fix time; record submission
+    reportable --> reportable: update details, aware_at, fix time, and record submission
     reportable --> closed_resolved: close (all 3 reports submitted)
     state "closed (resolution not_actively_exploited or invalid)" as closed_na
     state "closed (resolution resolved)" as closed_resolved
