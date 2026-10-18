@@ -3,7 +3,8 @@
 *Published copy of Team 17's system documentation, refreshed at each Team 17 release.*
 
 What Team 17's CRA reporting service does at the end of Phase 3: its models, interfaces,
-functionality, validation, and known limitations. Last updated 2026-10-18.
+functionality, validation, and known limitations. Last updated 2026-10-17 (US Eastern;
+times in the tables below are UTC).
 
 The service is deployed on Google Cloud Run at https://team17-prod-7zneiwx4ba-uc.a.run.app.
 The interface contract shared with Team 21 is [`openapi.yaml`](tester/openapi.yaml). How to
