@@ -42,11 +42,14 @@ passes, so no team marks its own work verified.
 
 ### Milestones
 
+Mark each one "Done" with the date. The "other team's suite" row is filled in by the
+other team.
+
 | Milestone | Team 17 | Team 21 |
 |---|---|---|
-| Base URL posted here | ✅ 2026-10-18 | ⬜ |
+| Base URL posted here | Done, 2026-10-18 | ⬜ |
 | Token sent to the other team | ⬜ | ⬜ |
-| Own Phase 3 suite passes against own deployment | ✅ 55/55, 2026-10-18 | ⬜ |
+| Own Phase 3 suite passes against own deployment | Done, 55/55, 2026-10-18 | ⬜ |
 | Other team's Phase 3 suite passes against this deployment | ⬜ | ⬜ |
 | Phase 3 operations frozen in the shared contract (both teams) | ⬜ | ⬜ |
 
