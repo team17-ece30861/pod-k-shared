@@ -55,8 +55,12 @@ other team.
 
 ### Team 17's deployment
 
-How to test it, and how it behaves where the contract leaves room for interpretation:
-[`team17/TESTING.md`](team17/TESTING.md). Team 21 can add a matching `team21/TESTING.md`.
+- System documentation (as delivered): [`team17/SYSTEM.md`](team17/SYSTEM.md)
+- How to test it, and how it behaves where the contract leaves room for interpretation:
+  [`team17/TESTING.md`](team17/TESTING.md)
+- Automated tester (runs against any team's deployment): [`team17/tester/`](team17/tester/README.md)
+
+Team 21 can add matching files under `team21/`.
 
 ## Tokens
 
