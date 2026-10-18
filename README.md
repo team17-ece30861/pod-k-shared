@@ -48,7 +48,7 @@ other team.
 | Milestone | Team 17 | Team 21 |
 |---|---|---|
 | Base URL posted here | Done, 2026-10-18 | ⬜ |
-| Token sent to the other team | ⬜ | ⬜ |
+| Token sent to the other team | Done, 2026-10-18 | ⬜ |
 | Own Phase 3 suite passes against own deployment | Done, 55/55, 2026-10-18 | ⬜ |
 | Other team's Phase 3 suite passes against this deployment | ⬜ | ⬜ |
 | Phase 3 operations frozen in the shared contract (both teams) | ⬜ | ⬜ |
