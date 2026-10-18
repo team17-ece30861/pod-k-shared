@@ -103,6 +103,26 @@ the pod can settle it for both teams.
 | `GET /tickets?state=…&obligation_status=…` | Not implemented yet (Phase 4). The filters are ignored and every ticket is returned. |
 | Reporter details | Only in `GET /tickets/{id}`. Never in lists, other responses, audit entries, or errors. |
 
+## For coding agents
+
+Agents testing this deployment also follow the pod's [`AGENTS.md`](../AGENTS.md). These
+mistakes come up most often when an agent tests someone else's server:
+
+1. **Never print the token.** `curl -v`, `--trace`, and verbose HTTP client logging print the
+   full `Authorization` header, so the token ends up in your transcript or CI logs. Read it
+   from an environment variable, and if you need to debug, log the status and body only.
+2. **Run tests one at a time.** Every test starts with a reset, so parallel runners
+   (`pytest -n`, concurrent requests across tests) wipe each other's data and fail at random.
+3. **Expected values come from the spec, not from our responses.** If an assertion fails,
+   don't copy what our server returned into the test. Check the gray-areas tables above; if
+   the difference is listed there, it's a spec question for the pod, not something to paper
+   over.
+4. **A slow first request isn't an outage.** Send `GET /health` first and allow up to 30
+   seconds for it. Use normal timeouts after that.
+5. **Clean up when you finish:** `POST /test/reset`, then `DELETE /test/clock`.
+6. **Ask before running anything** against this deployment, and report problems to your
+   person, who raises them with Team 17.
+
 ## Reporting a problem
 
 Open an issue in this repo, or message Team 17, with:
