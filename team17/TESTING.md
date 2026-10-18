@@ -18,8 +18,17 @@ leaves room for interpretation. Maintained by Team 17. For what's implemented, s
   `X-Actor` header naming the person. Missing, empty, or whitespace-only returns 400. The
   `/test/*` endpoints don't need it.
 - **Use exactly this URL.** Other Cloud Run hostnames for the same service return 400.
-- **Cold start:** it scales to zero, so the first request after a quiet period can take a
-  few seconds. Send `GET /health` first and don't count it toward timings.
+- **Spin-up time:** it scales to zero when idle, so the first request after a quiet period
+  starts a new instance. Rough numbers measured on 2026-10-18:
+
+  | Request | Time |
+  |---|---|
+  | First request after idle (instance starting) | about 3 to 6 seconds (3.1 s and 5.8 s seen) |
+  | First request that reads the database after that | about 1.5 seconds |
+  | Warm requests | under 0.5 seconds |
+
+  Send `GET /health` and one authenticated read (`GET /tickets`) before timing anything,
+  and don't count either toward timings.
 - **Leave it clean:** when you finish, `POST /test/reset` and then `DELETE /test/clock`, so
   it's empty and on real time.
 
