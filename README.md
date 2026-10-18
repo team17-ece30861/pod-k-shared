@@ -78,7 +78,7 @@ From Phase 2, Q5.3:
 | What | Source | Status |
 |---|---|---|
 | Shared contract, `openapi.yaml` | Phase 2, Section 5 | Draft lives in Team 17's repo. Moves here once both teams freeze the Phase 3 operations. |
-| Shared test file: inputs and hand-calculated outputs | Phase 2, Q4.2 | Starts with the Model D deadline examples. Each expected output is calculated by one team and checked by the other before it's added. |
+| Shared test file: inputs and hand-calculated outputs | Phase 2, Q4.2 | [`tests/`](tests/): Model D examples E1 to E8, calculated by Team 17 and waiting on Team 21's check. |
 
 ## Changing this repo
 
