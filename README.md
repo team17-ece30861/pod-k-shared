@@ -11,8 +11,47 @@ Phase 2, Q5.3: each team publishes its evaluation deployment's base URL here.
 
 | Team | Base URL | Contact | Status |
 |---|---|---|---|
-| Team 17 | https://team17-prod-7zneiwx4ba-uc.a.run.app | Quincy DeKlerk (platform) | Phase 3 operations live; see below |
-| Team 21 | *to be added by Team 21* | | |
+| Team 17 | https://team17-prod-7zneiwx4ba-uc.a.run.app | Quincy DeKlerk (platform) | See [Status](#status) |
+| Team 21 | *to be added by Team 21* | | See [Status](#status) |
+
+## Status
+
+What each team's evaluation deployment supports, and what the other team has checked.
+
+- ⬜ **Not yet:** not deployed.
+- 🟡 **Live:** deployed, and the team's own tests pass against it.
+- ✅ **Verified:** the *other* team's suite passed against it. Add the date.
+
+Each team updates its own column. A ✅ is added by the other team, after their suite
+passes, so no team marks its own work verified.
+
+### Operations
+
+| Operation | Phase | Team 17 | Team 21 |
+|---|---|---|---|
+| `GET /health` | 3 | 🟡 Live | ⬜ |
+| `POST /tickets` | 3 | 🟡 Live | ⬜ |
+| `GET /tickets/{id}`, `PATCH /tickets/{id}` | 3 | 🟡 Live | ⬜ |
+| `POST /tickets/{id}/triage` | 3 | 🟡 Live | ⬜ |
+| `GET /tickets/{id}/audit` | 3 | 🟡 Live | ⬜ |
+| `POST /test/reset`, `GET`/`PUT`/`DELETE /test/clock` | 3 | 🟡 Live | ⬜ |
+| `GET /tickets` with `state` and `obligation_status` filters | 4 | 🟡 Live without filters (filters are ignored) | ⬜ |
+| `GET /tickets/{id}/reports/{type}` (drafts) | 4 | ⬜ | ⬜ |
+| `POST /tickets/{id}/reports/{type}/submission` | 4 | ⬜ | ⬜ |
+| `POST /tickets/{id}/close` | 4 | ⬜ | ⬜ |
+
+### Milestones
+
+Mark each one "Done" with the date. The "other team's suite" row is filled in by the
+other team.
+
+| Milestone | Team 17 | Team 21 |
+|---|---|---|
+| Base URL posted here | Done, 2026-10-18 | ⬜ |
+| Token sent to the other team | ⬜ | ⬜ |
+| Own Phase 3 suite passes against own deployment | Done, 55/55, 2026-10-18 | ⬜ |
+| Other team's Phase 3 suite passes against this deployment | ⬜ | ⬜ |
+| Phase 3 operations frozen in the shared contract (both teams) | ⬜ | ⬜ |
 
 ### Team 17's deployment
 
@@ -21,19 +60,8 @@ Team 17 runs its own testing on a separate development server, so we never reset
 one. When the course staff review it, Team 21 shares it with them. Avoid running a suite
 (which resets everything) while the staff are reviewing.
 
-**What's implemented (as of 2026-10-18).** All Phase 3 operations are implemented, and our
-Phase 3 acceptance suite passed 55/55 against this URL on 2026-10-18. Cross-team testing
-hasn't happened yet, so Phase 3 isn't finished until Team 21's suite has run against it.
-
-| Operation | Status |
-|---|---|
-| `GET /health` | Implemented |
-| `POST /tickets`, `GET /tickets/{id}`, `PATCH /tickets/{id}` | Implemented |
-| `POST /tickets/{id}/triage` | Implemented |
-| `GET /tickets/{id}/audit` | Implemented |
-| `POST /test/reset`, `GET`/`PUT`/`DELETE /test/clock` | Implemented |
-| `GET /tickets` | Implemented without filters. `state` and `obligation_status` are ignored until Phase 4. |
-| `GET /tickets/{id}/reports/{type}`, `POST .../submission`, `POST /tickets/{id}/close` | Not yet (Phase 4) |
+**What's implemented.** See [Status](#status). Phase 3 isn't finished until Team 21's suite
+has run against this deployment.
 
 **Connection details.**
 - `GET /health` is public. Everything else needs `Authorization: Bearer <token>`.
@@ -69,5 +97,6 @@ From Phase 2, Q5.3:
 - All changes arrive as pull requests.
 - **Any change to the shared contract or the shared test file needs approval from someone
   on the other team** before it merges.
-- Each team may update its own row in the deployments table, and its own deployment
-  section, without the other team's approval.
+- Each team may update its own row in the deployments table, its own deployment section,
+  and its own column in [Status](#status) without the other team's approval. The other
+  team adds the ✅.
