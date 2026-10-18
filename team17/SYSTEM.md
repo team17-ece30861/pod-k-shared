@@ -59,6 +59,9 @@ Where the contract is silent (error precedence details, timestamp variants, how
 
 ## Models
 
+The state-machine and architecture diagrams as delivered, with notes on what changed since
+Phase 2, are in [Team 17's repository](https://github.com/team17-ece30861/cra-service/tree/main/docs/models).
+
 ### Data
 
 `Ticket` stores the state, resolution, receipt and awareness times, and the validated client
