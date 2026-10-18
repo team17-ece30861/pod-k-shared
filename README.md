@@ -55,20 +55,8 @@ other team.
 
 ### Team 17's deployment
 
-**Who uses it.** This URL is our evaluation deployment, for Team 21 and the course staff.
-Team 17 runs its own testing on a separate development server, so we never reset this
-one. When the course staff review it, Team 21 shares it with them. Avoid running a suite
-(which resets everything) while the staff are reviewing.
-
-**What's implemented.** See [Status](#status). Phase 3 isn't finished until Team 21's suite
-has run against this deployment.
-
-**Connection details.**
-- `GET /health` is public. Everything else needs `Authorization: Bearer <token>`.
-- Use exactly the URL above. Other Cloud Run hostnames for the same service return 400.
-- It scales to zero, so the first request after a quiet period takes a few seconds.
-- After a test run, leave it clean: `POST /test/reset`, then `DELETE /test/clock` to return
-  it to real time.
+How to test it, and how it behaves where the contract leaves room for interpretation:
+[`team17/TESTING.md`](team17/TESTING.md). Team 21 can add a matching `team21/TESTING.md`.
 
 ## Tokens
 
