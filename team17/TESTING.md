@@ -76,9 +76,10 @@ the pod can settle it for both teams.
 | Question | Team 17's behavior |
 |---|---|
 | Error precedence | 401, 413, 404, 400, 409, 422, as in the contract. A wrong method returns 405 right after the 401 check, even for an unknown ticket (`PUT /tickets/<unknown>/audit` is 405, not 404). |
-| Does 413 (over 64 KB) apply to routes without a body? | Yes, to every request, including `/close`, `/test/reset`, and `GET /health`. |
+| Does 413 (over 64 KB) apply to routes without a body? | Yes, for `POST`, `PUT`, `PATCH`, and `DELETE`, including `/close` and `/test/reset`. |
+| A `GET` request with a body | Never reaches the service. Google's front end rejects any `GET` that has a body, even a small one: over HTTP/2 the stream is reset with no response, and over HTTP/1.1 you get Google's HTML 400, not problem+json. Don't send bodies on `GET`. |
 | A body sent to a route that defines none | Ignored, not rejected. |
-| A chunked body with no `Content-Length` | Not supported. Treated as absent (400 `required`). |
+| A chunked or streamed body with no `Content-Length` | Accepted. A chunked HTTP/1.1 body and a streamed HTTP/2 body both worked (201). |
 | An unknown or malformed ticket ID or report type | 404. Ticket IDs are opaque strings; don't assume a format. |
 | What's public | Only `GET /health`. `HEAD /health` needs the token. |
 | How `errors[].field` is written | A dotted path with `[n]` for list items: `product.affected_versions[1]`. Body-level and JSON errors use `body`, header errors use `X-Actor`, query errors use the parameter name. |
