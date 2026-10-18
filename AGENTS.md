@@ -24,9 +24,12 @@ driving you is on. If you can't tell, ask.
 5. **Expected outputs are calculated by hand.** Expected values in the shared test file
    come from the pod spec and are worked out by hand, then checked by the other team.
    Never generate them by running either team's implementation.
-6. **Don't test the other team without a yes.** Running a suite against the other team's
+6. **Read the team's testing guide first.** Before testing a team's deployment, read that
+   team's `TESTING.md` (for example [`team17/TESTING.md`](team17/TESTING.md)), including its
+   section for coding agents.
+7. **Don't test the other team without a yes.** Running a suite against the other team's
    deployment resets all its data. Do it only when your person explicitly says so, and
    afterward leave it clean: `POST /test/reset`, then `DELETE /test/clock`.
-7. **Disagreements go to people.** If the contract, the test file, or the other team's
+8. **Disagreements go to people.** If the contract, the test file, or the other team's
    results look wrong, describe the problem for your person to raise with the other
    team. Don't change shared material to make your own team's results pass.
