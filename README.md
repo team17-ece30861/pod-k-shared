@@ -94,6 +94,8 @@ From Phase 2, Q5.3:
 
 ## Changing this repo
 
+Coding agents (either team's) follow [`AGENTS.md`](AGENTS.md).
+
 - All changes arrive as pull requests.
 - **Any change to the shared contract or the shared test file needs approval from someone
   on the other team** before it merges.
