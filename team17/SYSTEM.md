@@ -17,8 +17,8 @@ where the contract is silent, is in [TESTING.md](TESTING.md). The automated test
 
 | Deployment | Runs | What it has |
 |---|---|---|
-| Evaluation deployment (Orbit, used by Team 21 and the course staff) | `c1133ac`, launched 2026-11-01 17:24 UTC | Every Phase 3 and Phase 4 API operation. Its API code is identical to `ec62594`, the commit the full tester passed against on the development deployment. |
-| Development deployment (Launchpad) | `main` | The same API, plus the console (merged in Team 17's repository after the Orbit launch). The console reaches the evaluation deployment at the next launch. |
+| Evaluation deployment (Orbit, used by Team 21 and the course staff) | `be9572b`, launched 2026-11-01 20:48 UTC | Every Phase 3 and Phase 4 API operation, and the console. The full tester passed 222 of 222 against it the same day. |
+| Development deployment (Launchpad) | `main` | The same code as Orbit until the next merge; every merge to `main` deploys here first. |
 
 ## Functionality
 
@@ -107,7 +107,7 @@ part of the shared spec, so it changes neither the contract nor what Team 21 tes
 | --- | --- |
 | `POST /test/setup`, `GET /test/report` | The course's cross-team testing interface: a tester registers a session, then reads its report. Needs the token, not `X-Actor` (Q10). Sessions survive a reset. |
 | `POST /tester/test/setup`, `POST /tester/test/run`, `GET /tester/test/report` | Our deployed tester: runs the acceptance suite against a target's base URL in a subprocess, with only that target's token, and keeps the report. |
-| `/console/` | The console (see above). Session sign-in instead of the token. Live on the development deployment; on the evaluation deployment after the next launch. |
+| `/console/` | The console (see above). Session sign-in instead of the token. Live on both deployments since the 2026-11-01 release. |
 
 Where the contract is silent (error precedence details, timestamp variants, how
 `errors[].field` is written, and so on), the service's behavior is listed in
@@ -232,13 +232,18 @@ is in this repository ([tests/](../tests/README.md)) and has been checked by Tea
 | --- | --- | --- | --- |
 | Acceptance suite (222 tests) | Development deployment at `ec62594` | 222 passed, 0 failed | 2026-11-01 15:56 to 16:15 UTC |
 | Acceptance suite (222 tests) | Team 21's deployment | 202 of 222 passed. All but one failure trace to specific contract or Model C text; the remaining one is a spec gap (whether a 422 must list every problem) | 2026-11-01 16:57 to 17:03 UTC |
-| Launch to Orbit | Evaluation deployment, `c1133ac` (same API code as `ec62594`) | Tests, migrations, deploy, and health check passed | 2026-11-01 17:24 UTC |
-| Team 21's suite | Evaluation deployment | Ran on 2026-11-01; results not recorded here yet | 2026-11-01 |
+| Launch to Orbit | Evaluation deployment, `c1133ac` (API only) | Tests, migrations, deploy, and health check passed | 2026-11-01 17:24 UTC |
+| Team 21's suite (17 tests, one per AC-01 to AC-17) | Evaluation deployment at `c1133ac` | 17 of 17 passed (Team 21's report), including 500 malformed requests for AC-13 with no server errors | 2026-11-01 20:12 UTC |
+| Acceptance suite (222 tests) | Team 21's new deployment | 222 passed, 0 failed | 2026-11-01 20:47 to 20:55 UTC |
+| Acceptance suite (222 tests) | Development deployment at `f0765f7` (with the console) | 221 passed; the one failure was a network timeout on the run's last request, not a service error | 2026-11-01 20:20 to 20:39 UTC |
+| Launch to Orbit | Evaluation deployment, `be9572b` (API and console) | Tests, migrations, deploy, and health check passed | 2026-11-01 20:48 UTC |
+| Acceptance suite (222 tests) | Evaluation deployment at `be9572b` | 222 passed, 0 failed, 0 skipped | 2026-11-01 20:49 to 21:08 UTC |
 | CI at `c1133ac` | Linux, Python 3.12, PostgreSQL 18 | 1,231 tests, lint, migration and Django checks passed ([run](https://github.com/team17-ece30861/cra-service/actions/runs/41331009700)) | 2026-11-01 |
 | CI (every PR) | Same | Full test suite, lint, migration and Django checks; nothing merges or deploys unless it passes | Ongoing |
 
-Team 17 runs its suite against the development deployment and Team 21's deployment, never
-against the evaluation deployment. The Phase 3 runs (55 of 55 on both deployments) are
+Team 17 runs its suite against the development deployment and Team 21's deployment. It ran
+against the evaluation deployment once, right after the Phase 4 release, for the report (as in
+Phase 3). The Phase 3 runs (55 of 55 on both deployments) are
 recorded in the [Phase 3 version](https://github.com/team17-ece30861/cra-service/blob/main/docs/phase3.md).
 
 **GenAI corrections caught by checking:** an independent AI session, one that hadn't drawn
