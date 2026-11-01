@@ -19,6 +19,7 @@ def test_tester_setup_run_and_report(monkeypatch):
     def fake_request(method, target_url, path, *, json=None, actor=False):
         if method == "POST" and path == "/test/setup":
             return FakeResponse(201, {"session_id": json["session_id"]})
+
         if method == "GET" and path.startswith("/test/report?"):
             return FakeResponse(
                 200,
@@ -32,6 +33,7 @@ def test_tester_setup_run_and_report(monkeypatch):
                     }
                 },
             )
+
         raise AssertionError(f"unexpected request: {method} {path}")
 
     monkeypatch.setattr(tester_main, "_request", fake_request)
@@ -44,23 +46,56 @@ def test_tester_setup_run_and_report(monkeypatch):
     )
 
     client = TestClient(tester_main.app)
-    setup = client.post("/test/setup", json={"target_url": "https://example.test"})
+
+    setup = client.post(
+        "/test/setup",
+        json={"target_url": "https://example.test"},
+    )
+
     assert setup.status_code == 201
     session_id = setup.json()["session_id"]
 
-    before = client.get("/test/report", params={"session_id": session_id})
+    before = client.get(
+        "/test/report",
+        params={"session_id": session_id},
+    )
     assert before.status_code == 409
 
-    run = client.post("/test/run", json={"session_id": session_id})
+    run = client.post(
+        "/test/run",
+        json={"session_id": session_id},
+    )
+
     assert run.status_code == 200
+
     body = run.json()
+
     assert body["session_id"] == session_id
     assert body["target_url"] == "https://example.test"
     assert body["results"][0]["outcome"] == "pass"
 
-    report = client.get("/test/report", params={"session_id": session_id})
+    report = client.get(
+        "/test/report",
+        params={"session_id": session_id},
+    )
+
     assert report.status_code == 200
     assert report.json() == body
 
-    rerun = client.post("/test/run", json={"session_id": session_id})
+    rerun = client.post(
+        "/test/run",
+        json={"session_id": session_id},
+    )
+
     assert rerun.status_code == 409
+
+
+def test_target_specific_token_is_forwarded(monkeypatch):
+    monkeypatch.setenv(
+        "TARGET_TOKENS_JSON",
+        '{"https://team17.example":"team17-test-token"}',
+    )
+
+    headers = tester_main._headers("https://team17.example")
+
+    assert headers["Authorization"] == "Bearer team17-test-token"
