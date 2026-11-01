@@ -4,8 +4,10 @@ Team 17's automated black-box tests for the pod's common interface. They run ove
 against **any** team's deployment, needing only its base URL and an access token, and
 know nothing about how that service is built.
 
-**Covers (Phase 3):** AC-01 to AC-05, AC-14, AC-15, and AC-17 from the pod spec, plus the
-Model D E6 boundary. Every response is also checked against the response schemas in the
+**Covers (Phases 3 and 4):** AC-01 to AC-12 and AC-14 to AC-17 from the pod spec (drafts,
+recording submissions, closing, statuses, list filters and order, the audit log, and the
+reporter confidentiality sweep), plus the Model D E6 boundary and the pod's agreed answers
+to Q1 to Q6 and Q10. Every response is also checked against the response schemas in the
 pod's contract (`openapi.yaml`, included here).
 
 This folder is a published copy of the runner in Team 17's (private) service repository,
@@ -39,11 +41,14 @@ python -m pytest -c acceptance/pytest.ini acceptance --allow-reset -v
 | `--base-url URL` | Target system. Defaults to `CRA_BASE_URL`. Must be HTTPS, except for `localhost`. |
 | `--allow-reset` | Required. Confirms you may reset the target. |
 | `--report FILE` | Optional JSON report of run times, target, counts, and each test's outcome. Never contains the token or request bodies. |
+| `--operation-report FILE` | Optional Markdown table of each operation's success and error conformance, built from this run's results. |
+| `--tested-version LABEL` | Optional label for the deployment under test, recorded in both reports. Defaults to `CRA_TESTED_VERSION`. |
 
 ## Results and run time
 
-Against an HTTPS deployment that implements the Phase 3 operations correctly, all 55 tests
-pass. A full run takes about 80 seconds against Team 17's deployment. Each request times out
+The suite has 222 tests (59 of them in `test_phase3.py`). A deployment that implements only Phase 3 fails
+the Phase 4 ones with 404s; to run just Phase 3, add `acceptance/test_phase3.py` instead of
+`acceptance`. The Phase 3 run takes about 80 seconds against Team 17's deployment. Each request times out
 after 30 seconds, and a service that scales to zero may take several seconds to answer its
 first request.
 

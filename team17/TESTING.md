@@ -105,13 +105,22 @@ the pod can settle it for both teams.
 
 | Question | Team 17's behavior |
 |---|---|
-| Triage as `invalid` or `not_actively_exploited` with an `aware_at` | Accepted (200). `aware_at` is ignored and stays `null`. Open pod question Q1. |
-| `POST /tickets` with `fix.available_at` later than now | Accepted (201). The contract lists no 422 for submit. Open pod question Q7. |
+| Triage as `invalid` or `not_actively_exploited` with an `aware_at` | Accepted (200). `aware_at` is ignored and stays `null` (Q1, agreed 2026-11-01). |
+| `POST /tickets` with `fix.available_at` later than now | Accepted (201). The contract lists no 422 for submit. Q7: the pod agreed in principle to reject it with 422; that waits for a contract PR. |
 | `PATCH` and a stored future fix time | Only a fix time the request sends is checked against now. Editing other fields never fails because of a stored one. |
 | `PATCH` merging | Nested objects merge one level deep, lists are replaced whole, and `null` clears an optional field. `title`, `description`, and `product.manufacturer`/`name` can't be cleared (400). |
-| `GET /tickets` order | `next_due_at` ascending, tickets with no deadline last, then by `id`. |
-| `GET /tickets?state=…&obligation_status=…` | Not implemented yet (Phase 4). The filters are ignored and every ticket is returned. |
-| Reporter details | Only in `GET /tickets/{id}`. Never in lists, other responses, audit entries, or errors. |
+| `PATCH` that changes nothing | 200 with the current ticket, and **no** audit entry (Q6, agreed 2026-11-01). "Nothing" means the single-ticket view is identical: `[]` or `null` for a list that was never set is no change. A reporter-only change does add an entry, with the reporter left out of `changes`. |
+| `GET /tickets` order | Nearest unmet deadline (`next_due_at`) first, tickets with none last. Ties go to the oldest `received_at`, then `id` (Q2, agreed 2026-11-01). |
+| `next_due_at` | The earliest `due_at` among applicable reports not yet recorded. An overdue report counts. A final report waiting for a fix time doesn't. `null` once all are recorded. |
+| `GET /tickets?state=…&obligation_status=…` | Both filters work and combine. `obligation_status` matches a ticket if any of its three obligations has that status. Unknown values return 400. |
+| Drafts for a ticket that never became reportable | 409 (Q3, agreed 2026-11-01). A ticket closed as `resolved` still returns all four drafts, with the locked copies for recorded reports. |
+| Status of a recorded report | Recalculated against the current `due_at`, so an edit that moves a deadline earlier can turn `submitted` into `submitted_late` (Q4, agreed 2026-11-01). If the fix time is cleared after the final report is recorded, it shows `submitted` with `due_at: null`. Moving the test clock never changes a recorded report's status. |
+| Record submission body | Optional. With no `submitted_at`, the current (possibly fixed) clock is used. `submitted_at` must be between `aware_at` and now; there's no rule against the previous report's time (Q5, agreed 2026-11-01). |
+| Record submission errors | 409 (not reportable, previous report missing, or already recorded) is checked before 422 (missing Model C fields and a bad `submitted_at`, reported together in one `errors` list). |
+| Audit entry for a recorded report | One `report_submitted` entry with one change: `field: "reports.<type>"`, `old: null`, `new` holding `submitted_at`, `reference`, `content`, and `actor`. |
+| Closing | 409 unless the ticket is `reportable` with all three reports recorded. A closed ticket rejects every change with 409 and stays readable. |
+| Reporter details | Only in `GET /tickets/{id}`. Never in lists, drafts, recorded reports, audit entries, or errors. |
+| `POST /test/setup` and `X-Actor` | Not required, like every `/test/*` endpoint (Q10, agreed 2026-11-01). |
 
 ## For coding agents
 

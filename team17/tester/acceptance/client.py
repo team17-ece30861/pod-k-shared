@@ -121,13 +121,30 @@ class Service:
     def __init__(self, transport):
         self.transport = transport
         self.contract = Contract()
+        self.operation_checks = []
 
     def expect(self, method, path, status, *, template=None, **kwargs):
+        operation_path = template or path
+        check = None
+        if method.lower() in self.contract.document["paths"].get(operation_path, {}):
+            check = {
+                "method": method.upper(),
+                "path": operation_path,
+                "expected_status": status,
+                "actual_status": None,
+                "conforms": False,
+            }
+            self.operation_checks.append(check)
         response = self.transport.send(method, path, **kwargs)
+        if check is not None:
+            check["actual_status"] = response.status
         assert response.status == status, (
             f"{method} {template or path}: expected {status}, got {response.status}"
         )
-        return self.contract.validate(method, template or path, response)
+        body = self.contract.validate(method, operation_path, response)
+        if check is not None:
+            check["conforms"] = True
+        return body
 
     def fix_clock(self, value):
         return self.expect("PUT", "/test/clock", 200, body={"now": value}, actor=None)
