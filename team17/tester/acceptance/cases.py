@@ -243,3 +243,49 @@ class Phase3Checks:
         assert result["obligations"]["early_warning"]["status"] == "overdue"
         assert result["obligations"]["notification"]["status"] == "pending"
         assert result["obligations"]["final_report"]["status"] == "awaiting_fix"
+
+    @pytest.mark.parametrize("unknown_id", ["00000000-0000-0000-0000-000000000000", "not-an-id"])
+    def test_audit_unknown_ticket_is_404_and_changes_nothing(self, service, unknown_id):
+        ticket = service.create()
+        ticket_before = service.get(ticket["id"])
+        tickets_before = service.list()
+        audit_path = "/tickets/" + quote(ticket["id"], safe="") + "/audit"
+        audit_before = service.expect("GET", audit_path, 200, template="/tickets/{id}/audit")
+
+        problem = service.expect(
+            "GET",
+            "/tickets/" + quote(unknown_id, safe="") + "/audit",
+            404,
+            template="/tickets/{id}/audit",
+        )
+
+        assert problem["status"] == 404
+        assert service.get(ticket["id"]) == ticket_before
+        assert service.list() == tickets_before
+        assert (
+            service.expect("GET", audit_path, 200, template="/tickets/{id}/audit") == audit_before
+        )
+
+    @pytest.mark.parametrize("method", ["PUT", "DELETE"])
+    def test_audit_cannot_be_edited_or_deleted(self, service, method):
+        ticket = service.create()
+        service.triage(
+            ticket["id"],
+            {"decision": "actively_exploited", "aware_at": FIXED, "reason": "Confirmed"},
+        )
+        ticket_before = service.get(ticket["id"])
+        tickets_before = service.list()
+        audit_path = "/tickets/" + quote(ticket["id"], safe="") + "/audit"
+        audit_before = service.expect("GET", audit_path, 200, template="/tickets/{id}/audit")
+        assert [entry["seq"] for entry in audit_before] == [1, 2]
+
+        response = service.transport.send(method, audit_path, body={"entries": []})
+
+        assert response.status == 405
+        problem = service.contract.validate("GET", "/tickets/{id}/audit", response)
+        assert problem["status"] == 405
+        assert service.get(ticket["id"]) == ticket_before
+        assert service.list() == tickets_before
+        assert (
+            service.expect("GET", audit_path, 200, template="/tickets/{id}/audit") == audit_before
+        )

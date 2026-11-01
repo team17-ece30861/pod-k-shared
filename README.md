@@ -42,10 +42,10 @@ passes, so no team marks its own work verified.
 | `POST /tickets/{id}/triage` | 3 | 🟡 Live | ⬜ |
 | `GET /tickets/{id}/audit` | 3 | 🟡 Live | ⬜ |
 | `POST /test/reset`, `GET`/`PUT`/`DELETE /test/clock` | 3 | 🟡 Live | ⬜ |
-| `GET /tickets` with `state` and `obligation_status` filters | 4 | 🟡 Live without filters (filters are ignored) | ⬜ |
-| `GET /tickets/{id}/reports/{type}` (drafts) | 4 | ⬜ | ⬜ |
-| `POST /tickets/{id}/reports/{type}/submission` | 4 | ⬜ | ⬜ |
-| `POST /tickets/{id}/close` | 4 | ⬜ | ⬜ |
+| `GET /tickets` with `state` and `obligation_status` filters | 4 | 🟡 Live | ⬜ |
+| `GET /tickets/{id}/reports/{type}` (drafts) | 4 | 🟡 Live | ⬜ |
+| `POST /tickets/{id}/reports/{type}/submission` | 4 | 🟡 Live | ⬜ |
+| `POST /tickets/{id}/close` | 4 | 🟡 Live | ⬜ |
 
 ### Milestones
 
