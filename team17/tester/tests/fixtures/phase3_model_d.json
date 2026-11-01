@@ -1,0 +1,59 @@
+{
+  "source": "Phase 2 Q3.2 Model D, pod specification agreed 2026-09-25",
+  "cases": [
+    {
+      "id": "E1",
+      "scenario": "Friday report, triaged Monday, awareness at receipt",
+      "received_at": "2026-10-02T17:00:00Z",
+      "now": "2026-10-05T09:00:00Z",
+      "aware_at": "2026-10-02T17:00:00Z",
+      "expected_deadlines": {
+        "early_warning": "2026-10-03T17:00:00Z",
+        "notification": "2026-10-05T17:00:00Z"
+      },
+      "expected_statuses": {
+        "early_warning": "overdue",
+        "notification": "pending"
+      }
+    },
+    {
+      "id": "E2",
+      "scenario": "Same report, awareness at Monday confirmation",
+      "received_at": "2026-10-02T17:00:00Z",
+      "now": "2026-10-05T09:00:00Z",
+      "aware_at": "2026-10-05T09:00:00Z",
+      "expected_deadlines": {
+        "early_warning": "2026-10-06T09:00:00Z",
+        "notification": "2026-10-08T09:00:00Z"
+      }
+    },
+    {
+      "id": "E3",
+      "scenario": "Evidence of exploitation arrives after the report",
+      "received_at": "2026-10-05T09:00:00Z",
+      "aware_at": "2026-10-07T14:30:00Z",
+      "expected_deadlines": {
+        "early_warning": "2026-10-08T14:30:00Z",
+        "notification": "2026-10-10T14:30:00Z"
+      }
+    },
+    {
+      "id": "E4",
+      "scenario": "Fix after awareness",
+      "aware_at": "2026-10-05T09:00:00Z",
+      "fix_available_at": "2026-10-20T12:00:00Z",
+      "expected_deadlines": {
+        "final_report": "2026-11-03T12:00:00Z"
+      }
+    },
+    {
+      "id": "E5",
+      "scenario": "Fix released before awareness",
+      "aware_at": "2026-10-05T09:00:00Z",
+      "fix_available_at": "2026-09-28T00:00:00Z",
+      "expected_deadlines": {
+        "final_report": "2026-10-19T09:00:00Z"
+      }
+    }
+  ]
+}

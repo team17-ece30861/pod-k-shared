@@ -1,0 +1,993 @@
+openapi: 3.1.0
+info:
+  title: CRA Article 14 Reporting Service (Pod Common Interface)
+  version: 0.1.0-draft
+  summary: Shared cross-team testing interface for Teams 17 and 21, ECE 30861.
+  description: |
+    Translated from Phase 2, Section 5 (pod spec agreed September 25, 2026).
+    Requirement IDs (REQ-xx) and acceptance criteria (AC-xx) refer to Sections 3 and 4.
+
+    **Status:** DRAFT for pod review. Phase 3 freezes the operations tagged `phase-3`.
+    Operations tagged `phase-4` are included so schemas stay in one place, and may change.
+
+    **Conventions**
+    - All request and response bodies are JSON, up to 64 KB (65,536 bytes). Larger bodies return 413.
+    - Every request except `GET /health` requires `Authorization: Bearer <token>`.
+    - Every request that changes ticket data requires an `X-Actor` header naming the person
+      making the change. A missing or empty `X-Actor` returns 400.
+    - Timestamps are RFC 3339 with any UTC offset on input, and are always returned in UTC to
+      the second (e.g. `2026-10-05T09:00:00Z`). Fractional seconds are accepted and truncated
+      (AC-14). Values without seconds or without an offset return 400.
+    - Errors use problem details (RFC 9457) with media type `application/problem+json`.
+    - Unknown fields and system-set fields in request bodies return 400.
+    - If several errors apply, the first in this order is returned: 401, 413, 404, 400, 409, 422.
+    - A failed request changes nothing. Submit, triage, update, record submission, and close
+      each add exactly one audit entry when they succeed. Reads never change data.
+    - Obligation status is computed from stored times and the current (possibly fixed) clock.
+servers:
+  - url: https://team17-prod.example.run.app
+    description: Team 17 evaluation deployment (replace with the URL in the shared pod file)
+  - url: https://team21.example
+    description: Team 21 evaluation deployment (replace with the URL in the shared pod file)
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: phase-3
+    description: Frozen for Phase 3 (REQ-01 to REQ-04, REQ-12 to REQ-14, REQ-16).
+  - name: phase-4
+    description: Full reporting workflow (REQ-05 to REQ-11, REQ-15). May change in Phase 4.
+  - name: testing
+    description: Test controls (REQ-16). Must stay enabled on evaluation deployments.
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      tags: [phase-3]
+      security: []
+      responses:
+        "200":
+          description: Service is up. The body is not part of the contract.
+
+  /tickets:
+    post:
+      operationId: submitTicket
+      summary: Submit ticket
+      description: |
+        Stores the ticket in state `received`, assigns a unique ID, and sets `received_at` to the
+        current system (or fixed test) time. Adds a `created` audit entry. (REQ-01, REQ-12,
+        REQ-13, REQ-14; AC-01, AC-02, AC-14, AC-17)
+      tags: [phase-3]
+      parameters:
+        - $ref: "#/components/parameters/XActor"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketCreate"
+            examples:
+              example1:
+                summary: Example 1 (clock at 2026-10-05T09:00:00Z)
+                value:
+                  source: external_researcher
+                  title: Auth bypass in admin API
+                  description: Researcher reports login bypass using a crafted session cookie.
+                  product:
+                    manufacturer: Acme
+                    name: Acme Router OS
+                    affected_versions: ["4.1.0", "4.1.1"]
+                  reporter:
+                    name: J. Doe
+                    contact: jdoe@example.org
+      responses:
+        "201":
+          description: Ticket created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+    get:
+      operationId: listTickets
+      summary: List tickets
+      description: |
+        Returns tickets with the nearest unmet deadline (`next_due_at`) first. Tickets with no
+        unmet deadline come last. Never includes reporter details. (REQ-10, REQ-15; AC-11,
+        AC-17). Phase 3 needs only the unfiltered list, for AC-17.
+      tags: [phase-4]
+      parameters:
+        - name: state
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/TicketState"
+        - name: obligation_status
+          in: query
+          required: false
+          description: Matches tickets where any of the three obligations has this status.
+          schema:
+            $ref: "#/components/schemas/ObligationStatus"
+      responses:
+        "200":
+          description: List of tickets.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ticket"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /tickets/{id}:
+    parameters:
+      - $ref: "#/components/parameters/TicketId"
+    get:
+      operationId: getTicket
+      summary: Get ticket
+      description: |
+        Returns the ticket with deadlines and report statuses. This is the only response that
+        includes `reporter` (REQ-15). (REQ-04, REQ-05)
+      tags: [phase-3]
+      responses:
+        "200":
+          description: The ticket.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateTicket
+      summary: Update ticket
+      description: |
+        Updates client fields on a ticket that is not closed. Nested objects are merged one
+        level deep, lists are replaced whole, and `null` clears an optional field.
+        Changing `aware_at` requires `change_reason` and is allowed only while the ticket is
+        `reportable`. Neither `aware_at` nor `fix.available_at` may be later than now.
+        Deadlines are recalculated immediately. (REQ-04, REQ-06; AC-05, AC-07)
+      tags: [phase-4]
+      parameters:
+        - $ref: "#/components/parameters/XActor"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketUpdate"
+            examples:
+              example4:
+                summary: Example 4
+                value:
+                  member_states: ["DE", "NL"]
+      responses:
+        "200":
+          description: The updated ticket.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
+  /tickets/{id}/triage:
+    parameters:
+      - $ref: "#/components/parameters/TicketId"
+    post:
+      operationId: triageTicket
+      summary: Triage ticket
+      description: |
+        Only allowed in state `received` (otherwise 409).
+        - `actively_exploited`: requires `aware_at` (not later than now; may be earlier than
+          `received_at`). Moves the ticket to `reportable` and starts deadlines (REQ-02, REQ-04).
+        - `not_actively_exploited` or `invalid`: closes the ticket with that resolution; all
+          obligations become `not_applicable` (REQ-03).
+        Adds a `triaged` audit entry. (AC-03, AC-04, AC-05)
+      tags: [phase-3]
+      parameters:
+        - $ref: "#/components/parameters/XActor"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TriageRequest"
+            examples:
+              example2:
+                summary: Example 2 (clock at 2026-10-07T15:00:00Z, Model D E3)
+                value:
+                  decision: actively_exploited
+                  aware_at: "2026-10-07T14:30:00Z"
+                  reason: Customer logs show exploitation.
+      responses:
+        "200":
+          description: The ticket, now `reportable` or `closed`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
+  /tickets/{id}/reports/{type}:
+    parameters:
+      - $ref: "#/components/parameters/TicketId"
+      - name: type
+        in: path
+        required: true
+        description: Unknown types return 404.
+        schema:
+          $ref: "#/components/schemas/ReportType"
+    get:
+      operationId: getDraft
+      summary: Get report draft
+      description: |
+        Returns the draft built from ticket fields (Model C) and the required fields still
+        missing. Never includes reporter details. (REQ-07, REQ-15; AC-08)
+      tags: [phase-4]
+      responses:
+        "200":
+          description: The draft.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Draft"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /tickets/{id}/reports/{type}/submission:
+    parameters:
+      - $ref: "#/components/parameters/TicketId"
+      - name: type
+        in: path
+        required: true
+        description: "`user_advisory` and unknown types return 404."
+        schema:
+          $ref: "#/components/schemas/SubmittableReportType"
+    post:
+      operationId: recordSubmission
+      summary: Record report submission
+      description: |
+        Records that a report was submitted outside the system, then locks its content.
+        Requires state `reportable`, no missing required fields (otherwise 422), and the
+        previous report already submitted (early_warning > notification > final_report,
+        otherwise 409). Adds a `report_submitted` audit entry. (REQ-05, REQ-08; AC-09)
+      tags: [phase-4]
+      parameters:
+        - $ref: "#/components/parameters/XActor"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmissionRequest"
+            examples:
+              example5:
+                summary: Example 5 (clock at 2026-10-08T10:30:00Z)
+                value:
+                  submitted_at: "2026-10-08T10:00:00Z"
+                  reference: SRP-2026-00417
+      responses:
+        "200":
+          description: The locked report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Draft"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+
+  /tickets/{id}/close:
+    parameters:
+      - $ref: "#/components/parameters/TicketId"
+    post:
+      operationId: closeTicket
+      summary: Close ticket
+      description: |
+        Allowed only while `reportable` and after all three reports are submitted (otherwise
+        409). Sets state `closed` and resolution `resolved`. Adds a `closed` audit entry.
+        (REQ-09; AC-10)
+      tags: [phase-4]
+      parameters:
+        - $ref: "#/components/parameters/XActor"
+      responses:
+        "200":
+          description: The ticket, now closed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /tickets/{id}/audit:
+    parameters:
+      - $ref: "#/components/parameters/TicketId"
+    get:
+      operationId: getAuditLog
+      summary: Get audit log
+      description: |
+        Returns entries in order, numbered from 1 with no gaps. The log is append-only: any
+        other method on this path returns 405. (REQ-11; AC-12)
+      tags: [phase-4]
+      responses:
+        "200":
+          description: Audit entries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+
+  /test/reset:
+    post:
+      operationId: resetService
+      summary: Reset all data (testing)
+      description: Deletes all tickets, reports, and audit entries. (REQ-16; AC-17)
+      tags: [phase-3, testing]
+      responses:
+        "204":
+          description: All data deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /test/clock:
+    get:
+      operationId: getClock
+      summary: Read the current time (testing)
+      description: |
+        Returns the fixed time if one is set, otherwise the real current time. While fixed,
+        repeated reads return the same value (AC-17).
+      tags: [phase-3, testing]
+      responses:
+        "200":
+          description: The current time.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Clock"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      operationId: setClock
+      summary: Fix the current time (testing)
+      description: |
+        Fixes the service's current time at `now` until it is changed or released. The clock
+        does not advance while fixed. (REQ-16)
+      tags: [phase-3, testing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Clock"
+            example:
+              now: "2026-10-02T17:00:00Z"
+      responses:
+        "200":
+          description: The clock is fixed at the returned time.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Clock"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      operationId: releaseClock
+      summary: Release the fixed time (testing)
+      description: Returns the service to real time.
+      tags: [phase-3, testing]
+      responses:
+        "204":
+          description: The clock is released.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Access token, exchanged privately between teams. Never committed.
+
+  parameters:
+    TicketId:
+      name: id
+      in: path
+      required: true
+      description: Ticket ID. Tests must not assume a format. Unknown IDs return 404.
+      schema:
+        type: string
+        minLength: 1
+    XActor:
+      name: X-Actor
+      in: header
+      required: true
+      description: The person making the change. Missing or empty returns 400.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
+
+  responses:
+    BadRequest:
+      description: The request does not match the schema.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemWithErrors"
+          example:
+            title: Invalid request
+            status: 400
+            errors:
+              - field: title
+                message: required
+              - field: source
+                message: must be one of external_researcher, customer, internal, scanner, csirt
+    Unauthorized:
+      description: Missing or invalid token.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            title: Unauthorized
+            status: 401
+    NotFound:
+      description: Unknown ticket or report type.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            title: Not found
+            status: 404
+    MethodNotAllowed:
+      description: Method not allowed on this path.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            title: Method not allowed
+            status: 405
+    Conflict:
+      description: Not allowed in the ticket's current state.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            title: Conflict
+            status: 409
+            detail: The notification cannot be recorded before the early warning.
+    PayloadTooLarge:
+      description: Request body over 64 KB.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            title: Payload too large
+            status: 413
+    Unprocessable:
+      description: A valid request that breaks a rule.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemWithErrors"
+          example:
+            title: Rule violation
+            status: 422
+            errors:
+              - field: aware_at
+                message: must not be later than the current time
+
+  schemas:
+    Timestamp:
+      type: string
+      format: date-time
+      description: RFC 3339 with any UTC offset on input; always returned as UTC to the second.
+      examples: ["2026-10-05T09:00:00Z"]
+    TimestampOut:
+      type: string
+      format: date-time
+      pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    NullableTimestampOut:
+      oneOf:
+        - $ref: "#/components/schemas/TimestampOut"
+        - type: "null"
+
+    ShortText:
+      type: string
+      minLength: 1
+      maxLength: 200
+    LongText:
+      type: string
+      minLength: 1
+      maxLength: 10000
+    VersionList:
+      type: array
+      maxItems: 50
+      items:
+        type: string
+        minLength: 1
+        maxLength: 100
+
+    Source:
+      type: string
+      enum: [external_researcher, customer, internal, scanner, csirt]
+    TicketState:
+      type: string
+      enum: [received, reportable, closed]
+    Resolution:
+      type: string
+      enum: [resolved, not_actively_exploited, invalid]
+    Sensitivity:
+      type: string
+      enum: [CLEAR, GREEN, AMBER, AMBER+STRICT, RED]
+      description: TLP 2.0.
+    Severity:
+      type: string
+      enum: [low, medium, high, critical]
+    MemberState:
+      type: string
+      description: ISO 3166-1 alpha-2 code of an EU member state (Greece is GR).
+      enum: [AT, BE, BG, HR, CY, CZ, DK, EE, FI, FR, DE, GR, HU, IE, IT, LV, LT, LU, MT, NL,
+             PL, PT, RO, SK, SI, ES, SE]
+    ObligationStatus:
+      type: string
+      enum: [not_applicable, awaiting_fix, pending, overdue, submitted, submitted_late]
+    ReportType:
+      type: string
+      enum: [early_warning, notification, final_report, user_advisory]
+    SubmittableReportType:
+      type: string
+      enum: [early_warning, notification, final_report]
+
+    Product:
+      type: object
+      additionalProperties: false
+      required: [manufacturer, name]
+      properties:
+        manufacturer:
+          $ref: "#/components/schemas/ShortText"
+        name:
+          $ref: "#/components/schemas/ShortText"
+        affected_versions:
+          $ref: "#/components/schemas/VersionList"
+    Reporter:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        contact:
+          type: string
+          maxLength: 200
+    Vulnerability:
+      type: object
+      additionalProperties: false
+      properties:
+        cve_id:
+          type: string
+          pattern: "^CVE-\\d{4}-\\d{4,}$"
+        description:
+          $ref: "#/components/schemas/LongText"
+    Exploit:
+      type: object
+      additionalProperties: false
+      properties:
+        description:
+          $ref: "#/components/schemas/LongText"
+    Mitigations:
+      type: object
+      additionalProperties: false
+      properties:
+        taken:
+          $ref: "#/components/schemas/LongText"
+        for_users:
+          $ref: "#/components/schemas/LongText"
+    Fix:
+      type: object
+      additionalProperties: false
+      properties:
+        available_at:
+          $ref: "#/components/schemas/Timestamp"
+        description:
+          $ref: "#/components/schemas/LongText"
+        fixed_versions:
+          $ref: "#/components/schemas/VersionList"
+
+    TicketCreate:
+      type: object
+      additionalProperties: false
+      description: Client fields. Sending any system field (id, state, received_at, ...) returns 400.
+      required: [source, title, description, product]
+      properties:
+        source:
+          $ref: "#/components/schemas/Source"
+        title:
+          $ref: "#/components/schemas/ShortText"
+        description:
+          $ref: "#/components/schemas/LongText"
+        product:
+          $ref: "#/components/schemas/Product"
+        reporter:
+          $ref: "#/components/schemas/Reporter"
+        member_states:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/MemberState"
+        vulnerability:
+          $ref: "#/components/schemas/Vulnerability"
+        exploit:
+          $ref: "#/components/schemas/Exploit"
+        mitigations:
+          $ref: "#/components/schemas/Mitigations"
+        impact:
+          $ref: "#/components/schemas/LongText"
+        malicious_actor:
+          $ref: "#/components/schemas/LongText"
+        sensitivity:
+          $ref: "#/components/schemas/Sensitivity"
+        severity:
+          $ref: "#/components/schemas/Severity"
+        fix:
+          $ref: "#/components/schemas/Fix"
+
+    TicketUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: |
+        Any client field except `source`, plus `aware_at` and `change_reason`. `null` clears an
+        optional field. Nested objects merge one level deep; lists are replaced whole.
+      properties:
+        title:
+          $ref: "#/components/schemas/ShortText"
+        description:
+          $ref: "#/components/schemas/LongText"
+        product:
+          type: object
+          additionalProperties: false
+          properties:
+            manufacturer:
+              $ref: "#/components/schemas/ShortText"
+            name:
+              $ref: "#/components/schemas/ShortText"
+            affected_versions:
+              oneOf:
+                - $ref: "#/components/schemas/VersionList"
+                - type: "null"
+        reporter:
+          oneOf:
+            - $ref: "#/components/schemas/Reporter"
+            - type: "null"
+        member_states:
+          oneOf:
+            - type: array
+              uniqueItems: true
+              items:
+                $ref: "#/components/schemas/MemberState"
+            - type: "null"
+        vulnerability:
+          oneOf:
+            - $ref: "#/components/schemas/Vulnerability"
+            - type: "null"
+        exploit:
+          oneOf:
+            - $ref: "#/components/schemas/Exploit"
+            - type: "null"
+        mitigations:
+          oneOf:
+            - $ref: "#/components/schemas/Mitigations"
+            - type: "null"
+        impact:
+          oneOf:
+            - $ref: "#/components/schemas/LongText"
+            - type: "null"
+        malicious_actor:
+          oneOf:
+            - $ref: "#/components/schemas/LongText"
+            - type: "null"
+        sensitivity:
+          oneOf:
+            - $ref: "#/components/schemas/Sensitivity"
+            - type: "null"
+        severity:
+          oneOf:
+            - $ref: "#/components/schemas/Severity"
+            - type: "null"
+        fix:
+          oneOf:
+            - $ref: "#/components/schemas/Fix"
+            - type: "null"
+        aware_at:
+          $ref: "#/components/schemas/Timestamp"
+        change_reason:
+          $ref: "#/components/schemas/LongText"
+
+    TriageRequest:
+      type: object
+      additionalProperties: false
+      required: [decision, reason]
+      properties:
+        decision:
+          type: string
+          enum: [actively_exploited, not_actively_exploited, invalid]
+        reason:
+          $ref: "#/components/schemas/LongText"
+        aware_at:
+          $ref: "#/components/schemas/Timestamp"
+          description: Required when decision is actively_exploited; not later than now (422).
+
+    SubmissionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        submitted_at:
+          $ref: "#/components/schemas/Timestamp"
+          description: Defaults to now. Must be between aware_at and now (422).
+        reference:
+          $ref: "#/components/schemas/ShortText"
+
+    Clock:
+      type: object
+      additionalProperties: false
+      required: [now]
+      properties:
+        now:
+          $ref: "#/components/schemas/Timestamp"
+
+    Obligation:
+      type: object
+      required: [status, due_at, submitted_at, reference]
+      properties:
+        status:
+          $ref: "#/components/schemas/ObligationStatus"
+        due_at:
+          $ref: "#/components/schemas/NullableTimestampOut"
+        submitted_at:
+          $ref: "#/components/schemas/NullableTimestampOut"
+        reference:
+          type: [string, "null"]
+    Obligations:
+      type: object
+      required: [early_warning, notification, final_report]
+      properties:
+        early_warning:
+          $ref: "#/components/schemas/Obligation"
+        notification:
+          $ref: "#/components/schemas/Obligation"
+        final_report:
+          $ref: "#/components/schemas/Obligation"
+
+    Ticket:
+      type: object
+      description: |
+        A ticket as returned by every operation except Get ticket. Never includes `reporter`
+        (REQ-15). Optional client fields that were never set are null (lists are empty).
+      required: [id, state, resolution, received_at, aware_at, obligations, next_due_at,
+                 source, title, description, product]
+      properties:
+        id:
+          type: string
+        state:
+          $ref: "#/components/schemas/TicketState"
+        resolution:
+          oneOf:
+            - $ref: "#/components/schemas/Resolution"
+            - type: "null"
+        received_at:
+          $ref: "#/components/schemas/TimestampOut"
+        aware_at:
+          $ref: "#/components/schemas/NullableTimestampOut"
+        obligations:
+          $ref: "#/components/schemas/Obligations"
+        next_due_at:
+          $ref: "#/components/schemas/NullableTimestampOut"
+        source:
+          $ref: "#/components/schemas/Source"
+        title:
+          type: string
+        description:
+          type: string
+        product:
+          type: object
+          properties:
+            manufacturer:
+              type: string
+            name:
+              type: string
+            affected_versions:
+              type: array
+              items:
+                type: string
+        member_states:
+          type: array
+          items:
+            type: string
+        vulnerability:
+          type: [object, "null"]
+        exploit:
+          type: [object, "null"]
+        mitigations:
+          type: [object, "null"]
+        impact:
+          type: [string, "null"]
+        malicious_actor:
+          type: [string, "null"]
+        sensitivity:
+          oneOf:
+            - $ref: "#/components/schemas/Sensitivity"
+            - type: "null"
+        severity:
+          oneOf:
+            - $ref: "#/components/schemas/Severity"
+            - type: "null"
+        fix:
+          type: [object, "null"]
+    TicketDetail:
+      description: Get ticket response. The only place `reporter` appears (REQ-15).
+      allOf:
+        - $ref: "#/components/schemas/Ticket"
+        - type: object
+          properties:
+            reporter:
+              oneOf:
+                - type: object
+                  properties:
+                    name:
+                      type: [string, "null"]
+                    contact:
+                      type: [string, "null"]
+                - type: "null"
+
+    Draft:
+      type: object
+      required: [ticket_id, type, status, due_at, submitted_at, reference, content, missing_fields]
+      properties:
+        ticket_id:
+          type: string
+        type:
+          $ref: "#/components/schemas/ReportType"
+        status:
+          description: Null for user_advisory.
+          oneOf:
+            - $ref: "#/components/schemas/ObligationStatus"
+            - type: "null"
+        due_at:
+          $ref: "#/components/schemas/NullableTimestampOut"
+        submitted_at:
+          $ref: "#/components/schemas/NullableTimestampOut"
+        reference:
+          type: [string, "null"]
+        content:
+          type: object
+          description: Fields listed for this report type in Q3.2 Model C. Never includes reporter.
+        missing_fields:
+          type: array
+          items:
+            type: string
+
+    AuditEntry:
+      type: object
+      required: [seq, at, actor, action, changes, reason]
+      properties:
+        seq:
+          type: integer
+          minimum: 1
+        at:
+          $ref: "#/components/schemas/TimestampOut"
+        actor:
+          type: string
+        action:
+          type: string
+          enum: [created, triaged, updated, report_submitted, closed]
+        changes:
+          type: array
+          items:
+            type: object
+            required: [field, old, new]
+            properties:
+              field:
+                type: string
+              old: {}
+              new: {}
+        reason:
+          type: [string, "null"]
+
+    Problem:
+      type: object
+      description: RFC 9457 problem details. Extra members (such as `type`) are allowed.
+      required: [title, status]
+      properties:
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+    ProblemWithErrors:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          required: [errors]
+          properties:
+            errors:
+              type: array
+              minItems: 1
+              items:
+                type: object
+                required: [field, message]
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string

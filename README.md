@@ -2,8 +2,15 @@
 
 Shared between **Team 17** and **Team 21** (ECE 30861, Pod K) for the CRA Article 14
 reporting service. Each team builds its own implementation of the pod spec agreed on
-September 25, 2026. This repo holds what both teams depend on: where each evaluation
-deployment lives, how to test it, and (later) the shared contract and test file.
+September 25, 2026. This repo holds what both teams depend on: the specification, where
+each evaluation deployment lives, and how to test it.
+
+## Specification
+
+- [`spec.md`](spec.md): what every Pod K system must accept and return, and what counts as
+  correct behavior (requirements, models, deadline examples, acceptance criteria).
+- [`openapi.yaml`](openapi.yaml): the interface contract. Currently `0.1.0-draft`; the
+  Phase 3 operations are being frozen with both teams.
 
 ## Deployments (the pod file)
 
@@ -55,8 +62,12 @@ other team.
 
 ### Team 17's deployment
 
-How to test it, and how it behaves where the contract leaves room for interpretation:
-[`team17/TESTING.md`](team17/TESTING.md). Team 21 can add a matching `team21/TESTING.md`.
+- System documentation (as delivered): [`team17/SYSTEM.md`](team17/SYSTEM.md)
+- How to test it, and how it behaves where the contract leaves room for interpretation:
+  [`team17/TESTING.md`](team17/TESTING.md)
+- Automated tester (runs against any team's deployment): [`team17/tester/`](team17/tester/README.md)
+
+Team 21 can add matching files under `team21/`.
 
 ## Tokens
 
@@ -77,8 +88,8 @@ From Phase 2, Q5.3:
 
 | What | Source | Status |
 |---|---|---|
-| Shared contract, `openapi.yaml` | Phase 2, Section 5 | Draft lives in Team 17's repo. Moves here once both teams freeze the Phase 3 operations. |
-| Shared test file: inputs and hand-calculated outputs | Phase 2, Q4.2 | [`tests/`](tests/): Model D examples E1 to E8, calculated by Team 17 and waiting on Team 21's check. |
+| Shared contract, `openapi.yaml` | Phase 2, Section 5 | Published here (draft). Next: both teams freeze the Phase 3 operations in this copy. |
+| Shared test file: inputs and hand-calculated outputs | Phase 2, Q4.2 | [`tests/`](tests/): Model D examples E1 to E8, calculated by Team 17 and checked by Team 21 (email reply to Team 17's 2026-10-27 email). |
 
 ## Changing this repo
 
