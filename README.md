@@ -19,7 +19,7 @@ Phase 2, Q5.3: each team publishes its evaluation deployment's base URL here.
 | Team | Base URL | Contact | Status |
 |---|---|---|---|
 | Team 17 | https://team17-prod-7zneiwx4ba-uc.a.run.app | Quincy DeKlerk (platform) | See [Status](#status) |
-| Team 21 | *to be added by Team 21* | | See [Status](#status) |
+| Team 21 | https://team21-cra-reporting-service.onrender.com | Team 21 | See [Status](#status) |
 
 ## Status
 
@@ -36,16 +36,16 @@ passes, so no team marks its own work verified.
 
 | Operation | Phase | Team 17 | Team 21 |
 |---|---|---|---|
-| `GET /health` | 3 | 🟡 Live | ⬜ |
-| `POST /tickets` | 3 | 🟡 Live | ⬜ |
-| `GET /tickets/{id}`, `PATCH /tickets/{id}` | 3 | 🟡 Live | ⬜ |
-| `POST /tickets/{id}/triage` | 3 | 🟡 Live | ⬜ |
-| `GET /tickets/{id}/audit` | 3 | 🟡 Live | ⬜ |
-| `POST /test/reset`, `GET`/`PUT`/`DELETE /test/clock` | 3 | 🟡 Live | ⬜ |
-| `GET /tickets` with `state` and `obligation_status` filters | 4 | 🟡 Live | ⬜ |
-| `GET /tickets/{id}/reports/{type}` (drafts) | 4 | 🟡 Live | ⬜ |
-| `POST /tickets/{id}/reports/{type}/submission` | 4 | 🟡 Live | ⬜ |
-| `POST /tickets/{id}/close` | 4 | 🟡 Live | ⬜ |
+| `GET /health` | 3 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
+| `POST /tickets` | 3 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
+| `GET /tickets/{id}`, `PATCH /tickets/{id}` | 3 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
+| `POST /tickets/{id}/triage` | 3 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
+| `GET /tickets/{id}/audit` | 3 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
+| `POST /test/reset`, `GET`/`PUT`/`DELETE /test/clock` | 3 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
+| `GET /tickets` with `state` and `obligation_status` filters | 4 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
+| `GET /tickets/{id}/reports/{type}` (drafts) | 4 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
+| `POST /tickets/{id}/reports/{type}/submission` | 4 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
+| `POST /tickets/{id}/close` | 4 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
 
 ### Milestones
 
@@ -54,10 +54,11 @@ other team.
 
 | Milestone | Team 17 | Team 21 |
 |---|---|---|
-| Base URL posted here | Done, 2026-10-18 | ⬜ |
-| Token sent to the other team | Done, 2026-10-18 | ⬜ |
+| Base URL posted here | Done, 2026-10-18 | Done, 2026-11-01 (added by Team 17 at Team 21's request) |
+| Token sent to the other team | Done, 2026-10-18 | Done, 2026-10-18 |
 | Own Phase 3 suite passes against own deployment | Done, 55/55, 2026-10-18 | ⬜ |
-| Other team's Phase 3 suite passes against this deployment | ⬜ | ⬜ |
+| Other team's Phase 3 suite passes against this deployment | Done, 2026-11-01 (Team 21's suite) | Done, 55/55, 2026-10-18 (Team 17's suite) |
+| Other team's Phase 4 suite passes against this deployment | Done, 17/17, 2026-11-01 (Team 21's suite) | Done, 222/222, 2026-11-01 (Team 17's suite) |
 | Phase 3 operations frozen in the shared contract (both teams) | ⬜ | ⬜ |
 
 ### Team 17's deployment
@@ -67,7 +68,11 @@ other team.
   [`team17/TESTING.md`](team17/TESTING.md)
 - Automated tester (runs against any team's deployment): [`team17/tester/`](team17/tester/README.md)
 
-Team 21 can add matching files under `team21/`.
+### Team 21's deployment
+
+- Tester: https://cra-phase3-tester.onrender.com/
+- Source: https://github.com/WConrad44/cra-reporting-service
+- Tests and tester code: [`team21/`](team21/)
 
 ## Tokens
 
