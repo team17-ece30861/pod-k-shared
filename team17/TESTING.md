@@ -90,7 +90,7 @@ the pod can settle it for both teams.
 | A body sent to a route that defines none | Ignored, not rejected. |
 | A chunked or streamed body with no `Content-Length` | Accepted. A chunked HTTP/1.1 body and a streamed HTTP/2 body both worked (201). |
 | An unknown or malformed ticket ID or report type | 404. Ticket IDs are opaque strings; don't assume a format. |
-| What's public | Only `GET /health`. `HEAD /health` needs the token. |
+| What's public | `GET /health`, and the console's sign-in page and static files (`/console/`, `/static/`), which show no data until a person signs in with their own account. Every API operation needs the token. `HEAD /health` needs the token. |
 | How `errors[].field` is written | A dotted path with `[n]` for list items: `product.affected_versions[1]`. Body-level and JSON errors use `body`, header errors use `X-Actor`, query errors use the parameter name. |
 
 ### Time

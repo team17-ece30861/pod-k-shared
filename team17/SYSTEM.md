@@ -259,7 +259,7 @@ also had an independent agent review posted on its pull request before it merged
   a time, and finish with `POST /test/reset` and `DELETE /test/clock`.
 - **Hosting performance (LIM-02):** the service scales to zero, so the first request after
   idle takes about 3 to 6 seconds, plus about 1.5 seconds for the first database read. It
-  runs one instance with two workers and a 10-minute request timeout. The 1-second target
+  runs one instance with two workers and a 30-minute request timeout (so a full deployed-tester run fits; one run holds one worker while it lasts). The 1-second target
   with 1,000 tickets (REQ-17) hasn't been measured on the deployed service yet (Phase 5).
   Send `GET /health` and one authenticated read before timing anything.
 - **Spending cap and alerting (LIM-03):** a $10 spending cap stops the service until we
@@ -292,3 +292,7 @@ also had an independent agent review posted on its pull request before it merged
   update cases (AC-07) are tested in our CI but not yet in the HTTP tester, and a few error
   codes have no test (404 and 413 on PATCH and triage, 405 on the audit log in the
   generated table). No tests are currently failing.
+- **Console sign-in (LIM-12):** the console has no limit on failed sign-ins. Low; Phase 5.
+- **Deployed tester cleanup (LIM-13):** our deployed tester leaves the target's test clock
+  fixed and the run's test data in place. Call `POST /test/reset` and `DELETE /test/clock`
+  after a run. Low; Phase 5.
