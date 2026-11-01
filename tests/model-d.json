@@ -1,0 +1,197 @@
+{
+  "name": "Pod K shared test file: Model D deadline examples",
+  "source": "Phase 2 pod spec (agreed 2026-09-25), Section 3.2 Model D, E1 to E8",
+  "status": "Proposed by Team 17. Every case needs Team 21's check before this file is final.",
+  "conventions": {
+    "reset_first": "Every case starts with POST /test/reset. Run cases one at a time.",
+    "ticket_body": "submit_ticket uses the default body below unless a step gives one.",
+    "default_ticket_body": {
+      "source": "external_researcher",
+      "title": "Shared test ticket",
+      "description": "Simulated report for the pod's shared tests.",
+      "product": { "manufacturer": "Acme", "name": "Router OS" }
+    },
+    "x_actor": "Send any non-empty X-Actor header on submit, triage, and update.",
+    "expect": "Only the fields listed under expect are checked. Nested objects are matched field by field. Timestamps must match exactly, as returned (UTC, to the second).",
+    "ids": "save_as names the ticket ID returned by submit_ticket so later steps can refer to it. Never assume an ID format."
+  },
+  "cases": [
+    {
+      "id": "E1",
+      "scenario": "Friday report, triaged Monday, awareness at receipt",
+      "requirements": ["REQ-02", "REQ-04", "REQ-05"],
+      "acceptance_criteria": ["AC-03"],
+      "calculated_by": "Team 17 (by hand, 2026-10-18)",
+      "checked_by": null,
+      "steps": [
+        { "action": "set_clock", "now": "2026-10-02T17:00:00Z" },
+        { "action": "submit_ticket", "save_as": "t",
+          "expect": { "status": 201, "body": { "state": "received", "received_at": "2026-10-02T17:00:00Z" } } },
+        { "action": "set_clock", "now": "2026-10-05T09:00:00Z" },
+        { "action": "triage", "ticket": "t",
+          "body": { "decision": "actively_exploited", "aware_at": "2026-10-02T17:00:00Z", "reason": "Logs show exploitation since receipt." },
+          "expect": { "status": 200, "body": {
+            "state": "reportable",
+            "aware_at": "2026-10-02T17:00:00Z",
+            "obligations": {
+              "early_warning": { "due_at": "2026-10-03T17:00:00Z", "status": "overdue" },
+              "notification": { "due_at": "2026-10-05T17:00:00Z", "status": "pending" },
+              "final_report": { "due_at": null, "status": "awaiting_fix" }
+            } } } }
+      ]
+    },
+    {
+      "id": "E2",
+      "scenario": "Same report, awareness at Monday confirmation",
+      "requirements": ["REQ-02", "REQ-04", "REQ-05"],
+      "acceptance_criteria": ["AC-03"],
+      "calculated_by": "Team 17 (by hand, 2026-10-18)",
+      "checked_by": null,
+      "steps": [
+        { "action": "set_clock", "now": "2026-10-02T17:00:00Z" },
+        { "action": "submit_ticket", "save_as": "t", "expect": { "status": 201 } },
+        { "action": "set_clock", "now": "2026-10-05T09:00:00Z" },
+        { "action": "triage", "ticket": "t",
+          "body": { "decision": "actively_exploited", "aware_at": "2026-10-05T09:00:00Z", "reason": "Exploitation confirmed Monday." },
+          "expect": { "status": 200, "body": {
+            "state": "reportable",
+            "aware_at": "2026-10-05T09:00:00Z",
+            "obligations": {
+              "early_warning": { "due_at": "2026-10-06T09:00:00Z", "status": "pending" },
+              "notification": { "due_at": "2026-10-08T09:00:00Z", "status": "pending" },
+              "final_report": { "due_at": null, "status": "awaiting_fix" }
+            } } } }
+      ]
+    },
+    {
+      "id": "E3",
+      "scenario": "Evidence of exploitation arrives after the report",
+      "requirements": ["REQ-02", "REQ-04"],
+      "acceptance_criteria": ["AC-03"],
+      "calculated_by": "Team 17 (by hand, 2026-10-18)",
+      "checked_by": null,
+      "notes": "Triage time 2026-10-07T15:00:00Z matches Phase 2, Section 5.2, Example 2.",
+      "steps": [
+        { "action": "set_clock", "now": "2026-10-05T09:00:00Z" },
+        { "action": "submit_ticket", "save_as": "t", "expect": { "status": 201 } },
+        { "action": "set_clock", "now": "2026-10-07T15:00:00Z" },
+        { "action": "triage", "ticket": "t",
+          "body": { "decision": "actively_exploited", "aware_at": "2026-10-07T14:30:00Z", "reason": "Customer logs show exploitation." },
+          "expect": { "status": 200, "body": {
+            "state": "reportable",
+            "aware_at": "2026-10-07T14:30:00Z",
+            "obligations": {
+              "early_warning": { "due_at": "2026-10-08T14:30:00Z", "status": "pending" },
+              "notification": { "due_at": "2026-10-10T14:30:00Z", "status": "pending" },
+              "final_report": { "due_at": null, "status": "awaiting_fix" }
+            } } } }
+      ]
+    },
+    {
+      "id": "E4",
+      "scenario": "Fix after awareness (no daylight-saving shift across Oct 25 in the EU)",
+      "requirements": ["REQ-04", "REQ-06"],
+      "acceptance_criteria": ["AC-03"],
+      "calculated_by": "Team 17 (by hand, 2026-10-18)",
+      "checked_by": null,
+      "notes": "The fix time is set with PATCH once the clock reaches it, because a fix time may not be later than now.",
+      "steps": [
+        { "action": "set_clock", "now": "2026-10-05T09:00:00Z" },
+        { "action": "submit_ticket", "save_as": "t", "expect": { "status": 201 } },
+        { "action": "triage", "ticket": "t",
+          "body": { "decision": "actively_exploited", "aware_at": "2026-10-05T09:00:00Z", "reason": "Confirmed." },
+          "expect": { "status": 200 } },
+        { "action": "set_clock", "now": "2026-10-20T12:00:00Z" },
+        { "action": "update", "ticket": "t",
+          "body": { "fix": { "available_at": "2026-10-20T12:00:00Z" } },
+          "expect": { "status": 200, "body": {
+            "obligations": { "final_report": { "due_at": "2026-11-03T12:00:00Z", "status": "pending" } } } } }
+      ]
+    },
+    {
+      "id": "E5",
+      "scenario": "Fix released before awareness: 14 days counted from awareness",
+      "requirements": ["REQ-04", "REQ-06"],
+      "acceptance_criteria": ["AC-03"],
+      "calculated_by": "Team 17 (by hand, 2026-10-18)",
+      "checked_by": null,
+      "steps": [
+        { "action": "set_clock", "now": "2026-10-05T09:00:00Z" },
+        { "action": "submit_ticket", "save_as": "t", "expect": { "status": 201 } },
+        { "action": "triage", "ticket": "t",
+          "body": { "decision": "actively_exploited", "aware_at": "2026-10-05T09:00:00Z", "reason": "Confirmed." },
+          "expect": { "status": 200 } },
+        { "action": "update", "ticket": "t",
+          "body": { "fix": { "available_at": "2026-09-28T00:00:00Z" } },
+          "expect": { "status": 200, "body": {
+            "obligations": { "final_report": { "due_at": "2026-10-19T09:00:00Z", "status": "pending" } } } } }
+      ]
+    },
+    {
+      "id": "E6",
+      "scenario": "Exact boundary: pending at the due time, overdue one second later",
+      "requirements": ["REQ-05"],
+      "acceptance_criteria": ["AC-06"],
+      "calculated_by": "Team 17 (by hand, 2026-10-18)",
+      "checked_by": null,
+      "notes": "Uses E2's ticket. The early warning is never submitted.",
+      "steps": [
+        { "action": "set_clock", "now": "2026-10-02T17:00:00Z" },
+        { "action": "submit_ticket", "save_as": "t", "expect": { "status": 201 } },
+        { "action": "set_clock", "now": "2026-10-05T09:00:00Z" },
+        { "action": "triage", "ticket": "t",
+          "body": { "decision": "actively_exploited", "aware_at": "2026-10-05T09:00:00Z", "reason": "Exploitation confirmed Monday." },
+          "expect": { "status": 200 } },
+        { "action": "set_clock", "now": "2026-10-06T09:00:00Z" },
+        { "action": "get_ticket", "ticket": "t",
+          "expect": { "status": 200, "body": { "obligations": { "early_warning": { "due_at": "2026-10-06T09:00:00Z", "status": "pending" } } } } },
+        { "action": "set_clock", "now": "2026-10-06T09:00:01Z" },
+        { "action": "get_ticket", "ticket": "t",
+          "expect": { "status": 200, "body": { "obligations": { "early_warning": { "status": "overdue" } } } } }
+      ]
+    },
+    {
+      "id": "E7",
+      "scenario": "Time zone offset in input",
+      "requirements": ["REQ-13"],
+      "acceptance_criteria": ["AC-14"],
+      "calculated_by": "Team 17 (by hand, 2026-10-18)",
+      "checked_by": null,
+      "steps": [
+        { "action": "set_clock", "now": "2026-10-05T09:00:00Z" },
+        { "action": "submit_ticket", "save_as": "t", "expect": { "status": 201 } },
+        { "action": "triage", "ticket": "t",
+          "body": { "decision": "actively_exploited", "aware_at": "2026-10-05T11:00:00+02:00", "reason": "Confirmed." },
+          "expect": { "status": 200, "body": {
+            "aware_at": "2026-10-05T09:00:00Z",
+            "obligations": { "early_warning": { "due_at": "2026-10-06T09:00:00Z" } } } } },
+        { "action": "get_ticket", "ticket": "t",
+          "expect": { "status": 200, "body": { "aware_at": "2026-10-05T09:00:00Z" } } }
+      ]
+    },
+    {
+      "id": "E8",
+      "scenario": "Awareness time in the future (failure)",
+      "requirements": ["REQ-02", "REQ-12"],
+      "acceptance_criteria": ["AC-04"],
+      "calculated_by": "Team 17 (by hand, 2026-10-18)",
+      "checked_by": null,
+      "steps": [
+        { "action": "set_clock", "now": "2026-10-05T09:00:00Z" },
+        { "action": "submit_ticket", "save_as": "t", "expect": { "status": 201 } },
+        { "action": "triage", "ticket": "t",
+          "body": { "decision": "actively_exploited", "aware_at": "2026-10-05T09:00:01Z", "reason": "Confirmed." },
+          "expect": { "status": 422, "error_fields": ["aware_at"] } },
+        { "action": "get_ticket", "ticket": "t",
+          "expect": { "status": 200, "body": {
+            "state": "received",
+            "aware_at": null,
+            "obligations": {
+              "early_warning": { "due_at": null, "status": "not_applicable" },
+              "notification": { "due_at": null, "status": "not_applicable" },
+              "final_report": { "due_at": null, "status": "not_applicable" }
+            } } } }
+      ]
+    }
+  ]
+}
