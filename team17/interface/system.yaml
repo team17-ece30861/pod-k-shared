@@ -26,8 +26,8 @@ info:
     course's `message` and `source`. A wrong method returns 405.
 
     **Viewing this file.** The project paths are `$ref`s into `openapi.yaml`, whose own
-    `#/components/...` references resolve inside that file. Spec-compliant tools
-    (openapi-spec-validator, Redocly) handle this; a viewer that only reads one file may not.
+    `#/components/...` references resolve inside that file. Spec-compliant tools handle this
+    (we check it with openapi-spec-validator); a viewer that only reads one file may not.
 servers:
   - url: https://team17-prod-7zneiwx4ba-uc.a.run.app
     description: Team 17 evaluation deployment (Orbit)

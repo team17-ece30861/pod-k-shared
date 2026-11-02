@@ -34,8 +34,8 @@ info:
     afterwards (LIM-13): call the target's `POST /test/reset` and `DELETE /test/clock`.
 
     **Errors** are problem details (RFC 9457) with the course's `message` and `source`.
-    Besides the statuses listed per operation, a wrong method returns 405 and a body over
-    64 KB returns 413.
+    Besides the statuses listed per operation, a wrong method returns 405 and a POST body
+    over 64 KB returns 413 (don't send a body on GET: Google's front end rejects it).
 servers:
   - url: https://team17-prod-7zneiwx4ba-uc.a.run.app/tester
     description: Team 17 evaluation deployment (Orbit)
@@ -51,7 +51,7 @@ paths:
         `{"setup": {}}`, and returns it once the target answers 201 with the same ID. Does not
         run tests. A failed setup creates no runnable session.
 
-        A target's error is passed on with the target's own status, so a 400 or 401 here
+        A target's error is passed on with the target's own status, so a 400, 401 or 413 here
         can come from the target too: `source` tells them apart (`tester` for our own
         checks, the target's source otherwise).
       requestBody:
