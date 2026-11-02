@@ -12,22 +12,30 @@ info:
     staff each have their own token from Team 17 (never put it in a URL or the registry).
     `X-Actor` is not needed.
 
-    **Targets.** Only approved pod systems: this service itself and Team 21's deployment.
-    Any other `target_url` returns 400.
+    **Targets.** Only approved pod systems: this service at the URL above, and Team 21's
+    deployment (https://team21-cra-reporting-service.onrender.com, plus their earlier
+    host). Any other `target_url` returns 400.
 
-    **Timing.** Setup waits up to 60 seconds for the target's `POST /test/setup`. A run
-    takes about 11 to 12 minutes against our own system (all 222 tests) and stops at 28
-    minutes; the request limit is 30 minutes. Clients that drop the connection earlier
-    should fetch the report with `GET /test/report` (409 until the run ends). Run one
-    suite at a time: every test resets the target and fixes its clock.
+    **Timing.** Setup waits about 60 seconds at most for the target's `POST /test/setup`.
+    A full run (222 tests) took 655 seconds (about 11 minutes) against our evaluation
+    deployment and about 12 minutes against our development deployment on 2026-11-01; it
+    stops at 28 minutes, and the request limit is 30 minutes. If your client gives up
+    first, the run carries on: on 2026-11-01 our own client's connection dropped after
+    9 minutes and the run still finished and stored its report. Fetch it with
+    `GET /test/report` (409 until the run ends). Run one suite at a time: every test
+    resets the target and fixes its clock.
 
     **Sessions.** Each setup creates a new session. A session runs once; repeating a suite
-    needs a new session. Reports are kept in our database, so they survive restarts.
+    needs a new session. Finished reports are kept in our database, so they survive
+    restarts. A run cut off by a restart of our service never finishes: its session keeps
+    answering 409 and stores no report, so start a new session.
 
     **After a run.** The tester does not yet reset the target or release its clock
     afterwards (LIM-13): call the target's `POST /test/reset` and `DELETE /test/clock`.
 
     **Errors** are problem details (RFC 9457) with the course's `message` and `source`.
+    Besides the statuses listed per operation, a wrong method returns 405 and a body over
+    64 KB returns 413.
 servers:
   - url: https://team17-prod-7zneiwx4ba-uc.a.run.app/tester
     description: Team 17 evaluation deployment (Orbit)
@@ -42,6 +50,10 @@ paths:
         Generates a unique session ID, sends it to the target's `POST /test/setup` with
         `{"setup": {}}`, and returns it once the target answers 201 with the same ID. Does not
         run tests. A failed setup creates no runnable session.
+
+        A target's error is passed on with the target's own status, so a 400 or 401 here
+        can come from the target too: `source` tells them apart (`tester` for our own
+        checks, the target's source otherwise).
       requestBody:
         required: true
         content:
@@ -67,10 +79,11 @@ paths:
           $ref: "#/components/responses/PayloadTooLarge"
         default:
           description: |
-            The target's setup failed. A target error is returned with the target's own
-            status, `message` and `source` (`system` if it gave none). No response from the
-            target returns 500 with `source: communication`; a 201 without the session ID
-            returns 500 with `source: system`.
+            The target's setup failed. A target error (4xx or 5xx) is returned with the
+            target's own status, `message` and `source` (`system` if it gave none). Any
+            other non-201 answer, or a 201 without the session ID, returns 500 with
+            `source: system`. No response from the target returns 500 with
+            `source: communication`.
           content:
             application/problem+json:
               schema:
@@ -124,10 +137,12 @@ paths:
           $ref: "#/components/responses/PayloadTooLarge"
         "500":
           description: |
-            The tester aborted (time limit, or the suite stopped early). The report is
-            stored with the recorded outcomes, the interrupted test as `error` with
-            `source: tester`, and the tests never started as `skip`. Fetch it with
-            `GET /test/report`.
+            The tester aborted. If the suite hit its time limit or stopped early, the
+            stored report keeps the recorded outcomes, marks the interrupted test `error`
+            with `source: tester`, and the tests never started `skip`. If the tester itself
+            failed, no outcomes are kept: the first planned test is `error` (source
+            `tester`), the rest `skip`, and coverage is marked unavailable. Fetch the
+            report with `GET /test/report`.
           content:
             application/problem+json:
               schema:
@@ -267,7 +282,9 @@ components:
           minLength: 1
         results:
           type: array
-          description: Every planned test exactly once, in the order run.
+          description: |
+            Every planned test exactly once, in the order run. Empty only if the tester
+            failed so badly it couldn't list its tests.
           items:
             $ref: "#/components/schemas/Result"
         coverage:

@@ -15,14 +15,19 @@ info:
     `/test/*` endpoints don't.
 
     **Preparation, resets and cleanup.** `POST /test/setup` records the session ID and
-    returns at once (about 3 to 6 seconds if the service is starting from idle). It does
+    returns at once (about 3 to 6 seconds if the service is starting from idle, measured
+    2026-10-18; see `team17/TESTING.md`). It does
     not clear data: the pod's `POST /test/reset` does, and `PUT /test/clock` and
     `DELETE /test/clock` fix and release the test clock. All clients share one database
     and one clock, so run one suite at a time, and finish with `POST /test/reset` and
     `DELETE /test/clock`. Sessions survive resets.
 
     **Errors** from the two course endpoints are problem details (RFC 9457) with the
-    course's `message` and `source`.
+    course's `message` and `source`. A wrong method returns 405.
+
+    **Viewing this file.** The project paths are `$ref`s into `openapi.yaml`, whose own
+    `#/components/...` references resolve inside that file. Spec-compliant tools
+    (openapi-spec-validator, Redocly) handle this; a viewer that only reads one file may not.
 servers:
   - url: https://team17-prod-7zneiwx4ba-uc.a.run.app
     description: Team 17 evaluation deployment (Orbit)
@@ -181,7 +186,7 @@ components:
           schema:
             $ref: "#/components/schemas/InterfaceError"
     ServerError:
-      description: Preparation failed inside the system. No details of the failure are exposed.
+      description: The system failed while handling the request. No details of the failure are exposed.
       content:
         application/problem+json:
           schema:
