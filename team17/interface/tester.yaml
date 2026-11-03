@@ -1,0 +1,364 @@
+openapi: 3.1.1
+info:
+  title: Team 17 Tester (course cross-team testing interface)
+  version: 1.0.0
+  summary: Team 17's deployed tester, which runs our acceptance suite against a pod system.
+  description: |
+    The tester side of the course's "Cross-team Testing Interface". It runs Team 17's
+    acceptance suite (the same tests published in `pod-k-shared/team17/tester/`) against a
+    target system's base URL and returns one suite report with results and coverage.
+
+    **Access.** Every request needs `Authorization: Bearer <token>`. Team 21 and the course
+    staff each have their own token from Team 17 (never put it in a URL or the registry).
+    `X-Actor` is not needed.
+
+    **Targets.** Only approved pod systems: this service at the URL above, and Team 21's
+    deployment (https://team21-cra-reporting-service.onrender.com, plus their earlier
+    host). Any other `target_url` returns 400.
+
+    **Timing.** Setup waits about 60 seconds at most for the target's `POST /test/setup`.
+    A full run (222 tests) took 655 seconds (about 11 minutes) against our evaluation
+    deployment and about 12 minutes against our development deployment on 2026-11-01; it
+    stops at 28 minutes, and the request limit is 30 minutes. If your client gives up
+    first, the run carries on: on 2026-11-01 our own client's connection dropped after
+    9 minutes and the run still finished and stored its report. Fetch it with
+    `GET /test/report` (409 until the run ends). Run one suite at a time: every test
+    resets the target and fixes its clock.
+
+    **Sessions.** Each setup creates a new session. A session runs once; repeating a suite
+    needs a new session. Finished reports are kept in our database, so they survive
+    restarts. A run cut off by a restart of our service never finishes: its session keeps
+    answering 409 and stores no report, so start a new session.
+
+    **After a run.** The tester does not yet reset the target or release its clock
+    afterwards (LIM-13): call the target's `POST /test/reset` and `DELETE /test/clock`.
+
+    **Errors** are problem details (RFC 9457) with the course's `message` and `source`.
+    Besides the statuses listed per operation, a wrong method returns 405 and a POST body
+    over 64 KB returns 413 (don't send a body on GET: Google's front end rejects it).
+servers:
+  - url: https://team17-prod-7zneiwx4ba-uc.a.run.app/tester
+    description: Team 17 evaluation deployment (Orbit)
+security:
+  - bearerAuth: []
+paths:
+  /test/setup:
+    post:
+      operationId: testerSetup
+      summary: Create a session and wait for the target's system setup to succeed
+      description: |
+        Generates a unique session ID, sends it to the target's `POST /test/setup` with
+        `{"setup": {}}`, and returns it once the target answers 201 with the same ID. Does not
+        run tests. A failed setup creates no runnable session.
+
+        A target's error is passed on with the target's own status, so a 400, 401 or 413 here
+        can come from the target too: `source` tells them apart (`tester` for our own
+        checks, the target's source otherwise).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetupRequest"
+            example:
+              target_url: https://team21-cra-reporting-service.onrender.com
+      responses:
+        "201":
+          description: The target is ready. The same session ID was returned by the target.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+              example:
+                session_id: run-3f2b8c1e-7d4a-4f0e-9a51-2c6d8e0b7f13
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        default:
+          description: |
+            The target's setup failed. A target error (4xx or 5xx) is returned with the
+            target's own status, `message` and `source` (`system` if it gave none). Any
+            other non-201 answer, or a 201 without the session ID, returns 500 with
+            `source: system`. No response from the target returns 500 with
+            `source: communication`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/InterfaceError"
+              example:
+                title: Internal server error
+                status: 500
+                detail: "System setup failed: POST /test/setup failed: URLError"
+                message: "System setup failed: POST /test/setup failed: URLError"
+                source: communication
+  /test/run:
+    post:
+      operationId: testerRun
+      summary: Run the whole suite once and return the suite report
+      description: |
+        Runs every planned test in order against the session's target through the pod's
+        project API, reads the target's `GET /test/report` for code coverage, stores the
+        report, and returns it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunRequest"
+      responses:
+        "200":
+          description: The suite finished. Failed tests and target errors are in `results`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/UnknownSession"
+        "409":
+          description: This session has already run, or is running now (also after an abort).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/InterfaceError"
+              example:
+                title: Conflict
+                status: 409
+                detail: This session has already run
+                message: This session has already run
+                source: tester
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          description: |
+            The tester aborted. If the suite hit its time limit or stopped early, the
+            stored report keeps the recorded outcomes, marks the interrupted test `error`
+            with `source: tester`, and the tests never started `skip`. If the tester itself
+            failed, no outcomes are kept: the first planned test is `error` (source
+            `tester`), the rest `skip`, and coverage is marked unavailable. Fetch the
+            report with `GET /test/report`.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/InterfaceError"
+              example:
+                title: Internal server error
+                status: 500
+                detail: The test suite did not finish within 1680 seconds
+                message: The test suite did not finish within 1680 seconds
+                source: tester
+  /test/report:
+    get:
+      operationId: testerReport
+      summary: Retrieve the stored suite report without running tests
+      parameters:
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: The stored report, the same body a finished or aborted run produced.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/UnknownSession"
+        "409":
+          description: The suite hasn't run yet, or is still running. Try again later.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/InterfaceError"
+              example:
+                title: Conflict
+                status: 409
+                detail: The suite has not finished
+                message: The suite has not finished
+                source: tester
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Team 17 issues each client its own token privately.
+  responses:
+    InvalidRequest:
+      description: |
+        Invalid request: malformed JSON, a missing or unknown field, a target that isn't a
+        plain HTTP(S) base URL (no query, fragment or credentials), or a target that isn't an
+        approved pod system. An invalid request does not use up a session.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/InterfaceError"
+          example:
+            title: Invalid request
+            status: 400
+            detail: Invalid request
+            errors:
+              - field: target_url
+                message: is not an approved pod system
+            message: Invalid request
+            source: tester
+    Unauthorized:
+      description: Missing or invalid token.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/InterfaceError"
+          example:
+            title: Unauthorized
+            status: 401
+            message: Unauthorized
+            source: tester
+    UnknownSession:
+      description: No tester session has this ID.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/InterfaceError"
+          example:
+            title: Not found
+            status: 404
+            detail: Unknown session
+            message: Unknown session
+            source: tester
+    PayloadTooLarge:
+      description: The request body is over 64 KB (65,536 bytes).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/InterfaceError"
+  schemas:
+    SetupRequest:
+      type: object
+      additionalProperties: false
+      required: [target_url]
+      properties:
+        target_url:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: The target system's base URL, without `/test` or a trailing path.
+    RunRequest:
+      type: object
+      additionalProperties: false
+      required: [session_id]
+      properties:
+        session_id:
+          type: string
+          minLength: 1
+          maxLength: 200
+    Session:
+      type: object
+      required: [session_id]
+      properties:
+        session_id:
+          type: string
+          minLength: 1
+    Report:
+      type: object
+      required: [session_id, target_url, results, coverage]
+      properties:
+        session_id:
+          type: string
+          minLength: 1
+        target_url:
+          type: string
+          minLength: 1
+        results:
+          type: array
+          description: |
+            Every planned test exactly once, in the order run. Empty only if the tester
+            failed so badly it couldn't list its tests.
+          items:
+            $ref: "#/components/schemas/Result"
+        coverage:
+          type: object
+          required: [code, component, system]
+          properties:
+            code:
+              $ref: "#/components/schemas/Measure"
+            component:
+              $ref: "#/components/schemas/Measure"
+            system:
+              $ref: "#/components/schemas/Measure"
+    Result:
+      type: object
+      required: [test_id, outcome, message]
+      properties:
+        test_id:
+          type: string
+          minLength: 1
+          description: The test's pytest node ID, unique within the report.
+        outcome:
+          type: string
+          enum: [pass, fail, error, skip]
+        message:
+          type: string
+          minLength: 1
+        source:
+          $ref: "#/components/schemas/Source"
+      if:
+        properties:
+          outcome:
+            const: error
+      then:
+        required: [source]
+    Measure:
+      type: object
+      description: "`covered` and `total` are both null when the measure isn't available; `basis` says why."
+      required: [covered, total, basis]
+      properties:
+        covered:
+          type: [integer, "null"]
+          minimum: 0
+        total:
+          type: [integer, "null"]
+          minimum: 0
+        basis:
+          type: string
+          minLength: 1
+    Source:
+      type: string
+      enum: [tester, system, communication, unknown]
+    InterfaceError:
+      type: object
+      description: RFC 9457 problem details plus the course's `message` and `source`.
+      required: [title, status, message, source]
+      properties:
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        message:
+          type: string
+          minLength: 1
+        source:
+          $ref: "#/components/schemas/Source"
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field:
+                type: string
+              message:
+                type: string

@@ -1,0 +1,271 @@
+openapi: 3.1.1
+info:
+  title: Team 17 System (pod project API and course test endpoints)
+  version: 1.0.0
+  summary: Team 17's CRA reporting service, as a target of the course's cross-team testing.
+  description: |
+    The system side of the course's "Cross-team Testing Interface": the course's
+    `POST /test/setup` and `GET /test/report`, described here, plus the pod's project API.
+    The project API (every other path below) is the pod contract, `openapi.yaml` at the
+    top of `pod-k-shared`, and is referenced from there rather than copied.
+
+    **Access.** Every request except `GET /health` needs `Authorization: Bearer <token>`.
+    Team 21 and the course staff each have their own token from Team 17 (never put it in a
+    URL or the registry). Requests that change ticket data also need `X-Actor`; the
+    `/test/*` endpoints don't.
+
+    **Preparation, resets and cleanup.** `POST /test/setup` records the session ID and
+    returns at once (about 3 to 6 seconds if the service is starting from idle, measured
+    2026-10-18; see `team17/TESTING.md`). It does
+    not clear data: the pod's `POST /test/reset` does, and `PUT /test/clock` and
+    `DELETE /test/clock` fix and release the test clock. All clients share one database
+    and one clock, so run one suite at a time, and finish with `POST /test/reset` and
+    `DELETE /test/clock`. Sessions survive resets.
+
+    **Errors** from the two course endpoints are problem details (RFC 9457) with the
+    course's `message` and `source`. A wrong method returns 405.
+
+    **Viewing this file.** The project paths are `$ref`s into `openapi.yaml`, whose own
+    `#/components/...` references resolve inside that file. Spec-compliant tools handle this
+    (we check it with openapi-spec-validator); a viewer that only reads one file may not.
+servers:
+  - url: https://team17-prod-7zneiwx4ba-uc.a.run.app
+    description: Team 17 evaluation deployment (Orbit)
+security:
+  - bearerAuth: []
+paths:
+  /test/setup:
+    post:
+      operationId: setupSession
+      summary: Prepare the system for a test session
+      description: |
+        Records the supplied session ID (a tester's, or a unique ID from the course staff
+        for direct testing) and returns it. The service is ready as soon as this returns;
+        no pod starting data is defined, so `setup` is `{}`. Does not run tests.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetupRequest"
+            example:
+              session_id: run-3f2b8c1e-7d4a-4f0e-9a51-2c6d8e0b7f13
+              setup: {}
+      responses:
+        "201":
+          description: Ready. Returns the same session ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: The session ID already exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/InterfaceError"
+              example:
+                title: Conflict
+                status: 409
+                detail: Session ID already exists
+                message: Session ID already exists
+                source: system
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /test/report:
+    get:
+      operationId: getSessionReport
+      summary: Code coverage measured for a session
+      description: |
+        Returns the session's code coverage. The deployed service isn't instrumented for
+        code coverage, so both counts are null and `basis` says why. Setup completes
+        before it returns, so this never answers 409. Does not run project operations.
+      parameters:
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: The session's coverage.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemReport"
+              example:
+                session_id: run-3f2b8c1e-7d4a-4f0e-9a51-2c6d8e0b7f13
+                coverage:
+                  code:
+                    covered: null
+                    total: null
+                    basis: Source lines; the deployed service is not instrumented for code coverage
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No session has this ID.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/InterfaceError"
+              example:
+                title: Not found
+                status: 404
+                detail: Unknown session
+                message: Unknown session
+                source: system
+        "500":
+          $ref: "#/components/responses/ServerError"
+  # The pod's project API and test controls: the pod contract, unchanged.
+  /health:
+    $ref: "../../openapi.yaml#/paths/~1health"
+  /tickets:
+    $ref: "../../openapi.yaml#/paths/~1tickets"
+  /tickets/{id}:
+    $ref: "../../openapi.yaml#/paths/~1tickets~1{id}"
+  /tickets/{id}/triage:
+    $ref: "../../openapi.yaml#/paths/~1tickets~1{id}~1triage"
+  /tickets/{id}/reports/{type}:
+    $ref: "../../openapi.yaml#/paths/~1tickets~1{id}~1reports~1{type}"
+  /tickets/{id}/reports/{type}/submission:
+    $ref: "../../openapi.yaml#/paths/~1tickets~1{id}~1reports~1{type}~1submission"
+  /tickets/{id}/close:
+    $ref: "../../openapi.yaml#/paths/~1tickets~1{id}~1close"
+  /tickets/{id}/audit:
+    $ref: "../../openapi.yaml#/paths/~1tickets~1{id}~1audit"
+  /test/reset:
+    $ref: "../../openapi.yaml#/paths/~1test~1reset"
+  /test/clock:
+    $ref: "../../openapi.yaml#/paths/~1test~1clock"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Team 17 issues each client its own token privately.
+  responses:
+    InvalidRequest:
+      description: Malformed JSON, a missing or unknown field, or a missing `session_id` query parameter.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/InterfaceError"
+          example:
+            title: Invalid request
+            status: 400
+            detail: Invalid setup request
+            errors:
+              - field: session_id
+                message: required
+            message: Invalid setup request
+            source: system
+    Unauthorized:
+      description: Missing or invalid token.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/InterfaceError"
+          example:
+            title: Unauthorized
+            status: 401
+            message: Unauthorized
+            source: system
+    PayloadTooLarge:
+      description: The request body is over 64 KB (65,536 bytes).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/InterfaceError"
+    ServerError:
+      description: The system failed while handling the request. No details of the failure are exposed.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/InterfaceError"
+          example:
+            title: Internal server error
+            status: 500
+            message: Internal server error
+            source: system
+  schemas:
+    SetupRequest:
+      type: object
+      additionalProperties: false
+      required: [session_id]
+      properties:
+        session_id:
+          type: string
+          minLength: 1
+          maxLength: 200
+        setup:
+          type: object
+          description: Pod-defined starting data. The pod defines none, so send `{}` (or leave it out).
+    Session:
+      type: object
+      required: [session_id]
+      properties:
+        session_id:
+          type: string
+          minLength: 1
+    SystemReport:
+      type: object
+      required: [session_id, coverage]
+      properties:
+        session_id:
+          type: string
+          minLength: 1
+        coverage:
+          type: object
+          required: [code]
+          properties:
+            code:
+              type: object
+              required: [covered, total, basis]
+              properties:
+                covered:
+                  type: [integer, "null"]
+                  minimum: 0
+                total:
+                  type: [integer, "null"]
+                  minimum: 0
+                basis:
+                  type: string
+                  minLength: 1
+    Source:
+      type: string
+      enum: [tester, system, communication, unknown]
+    InterfaceError:
+      type: object
+      description: RFC 9457 problem details plus the course's `message` and `source`.
+      required: [title, status, message, source]
+      properties:
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        message:
+          type: string
+          minLength: 1
+        source:
+          $ref: "#/components/schemas/Source"
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field:
+                type: string
+              message:
+                type: string
