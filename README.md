@@ -46,7 +46,7 @@ passes, so no team marks its own work verified.
 | `GET /tickets/{id}/reports/{type}` (drafts) | 4 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
 | `POST /tickets/{id}/reports/{type}/submission` | 4 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
 | `POST /tickets/{id}/close` | 4 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
-| Contract 0.3.0: `POST /tickets` 422 for a future fix time (Q7), `member_states: ["unknown"]` (Q9), 422 lists every problem | 5 | 🟡 Live since the Phase 5 launch, `<launch date>` | Team 21 to fill |
+| Contract 0.3.0: `POST /tickets` 422 for a future fix time (Q7), `member_states: ["unknown"]` (Q9), 422 lists every problem | 5 | 🟡 Live since the Phase 5 launch, 2026-11-22 (Orbit at `c875f14`) | Team 21 to fill |
 
 ### Milestones
 

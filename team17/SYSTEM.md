@@ -3,7 +3,7 @@
 *Published copy of Team 17's system documentation, refreshed at each Team 17 release.*
 
 What Team 17's CRA reporting service does at the end of Phase 5: its models, interfaces,
-functionality, validation, and known limitations. Last updated <date of the Phase 5 launch> (US Eastern;
+functionality, validation, and known limitations. Last updated November 22, 2026 (US Eastern;
 times in the tables below are UTC). The Phase 3 version is kept as a record in
 [Team 17's repository](https://github.com/team17-ece30861/cra-service/blob/main/docs/phase3.md).
 
@@ -17,7 +17,7 @@ where the contract is silent, is in [TESTING.md](TESTING.md). The automated test
 
 | Deployment | Runs | What it has |
 |---|---|---|
-| Evaluation deployment (Orbit, used by Team 21 and the course staff) | `<Orbit commit at Phase 5 launch>`, launched `<launch date and time, UTC>` | Every API operation (contract 0.3.0), the console, and the course's testing interface. `<Tester result against it after the launch>` |
+| Evaluation deployment (Orbit, used by Team 21 and the course staff) | `c875f14` (revision `team17-prod-00011-qqg`), launched 2026-11-22 17:12 UTC | Every API operation (contract 0.3.0), the console, and the course's testing interface. `<Tester result against it after the launch>` |
 | Development deployment (Launchpad) | `main` | The same code as Orbit until the next merge; every merge to `main` deploys here first. |
 
 ## Functionality
