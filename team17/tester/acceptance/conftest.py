@@ -11,7 +11,6 @@ from acceptance.reporting import operation_statuses, render_operation_table
 
 RESULTS = {}
 STARTED = None
-PROGRESS = None  # --progress path: one JSON line per finished test, written as it finishes
 
 
 def pytest_addoption(parser):
@@ -24,19 +23,12 @@ def pytest_addoption(parser):
     )
     parser.addoption("--report", default=None, help="Write a JSON result report")
     parser.addoption("--operation-report", default=None, help="Write a Markdown operation table")
-    parser.addoption(
-        "--progress",
-        default=None,
-        help="Append each finished test's result to this JSON Lines file as it finishes, "
-        "so results survive if the run is stopped before the end",
-    )
 
 
 def pytest_sessionstart(session):
-    global STARTED, PROGRESS
+    global STARTED
     config = session.config
     STARTED = None
-    PROGRESS = None
     RESULTS.clear()
     if config.option.collectonly:
         return
@@ -54,9 +46,6 @@ def pytest_sessionstart(session):
     except ValueError as error:
         raise pytest.UsageError(str(error)) from None
     STARTED = time.time()
-    if config.getoption("--progress"):
-        PROGRESS = Path(config.getoption("--progress"))
-        PROGRESS.parent.mkdir(parents=True, exist_ok=True)
 
 
 @pytest.fixture
@@ -92,11 +81,6 @@ def pytest_runtest_logreport(report):
         entry["message"] = crash.message if crash else str(report.longrepr)[-500:]
     if report.failed or entry["outcome"] != "failed" and (report.when == "call" or report.skipped):
         entry["outcome"] = report.outcome
-    # Written once the test's teardown ends, so a run stopped during a teardown reports
-    # that test as interrupted even though its call had finished.
-    if report.when == "teardown" and PROGRESS is not None:
-        with PROGRESS.open("a", encoding="utf-8") as progress:
-            progress.write(json.dumps(entry) + "\n")
 
 
 def pytest_sessionfinish(session, exitstatus):
