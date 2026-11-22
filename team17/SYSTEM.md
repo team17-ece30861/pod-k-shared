@@ -240,6 +240,7 @@ is in this repository ([tests/](../tests/README.md)) and has been checked by Tea
 | AC-13 malformed requests (`acceptance/malformed.py`, macOS corpus) | Evaluation deployment at `c875f14` | 683 requests, 683 distinct invalid inputs, 133 fault categories: 0 server errors, 0 contract mismatches, stored data unchanged | 2026-11-22 17:26 to 17:29 UTC |
 | Team 21's published tester (17 tests, AC-01 to AC-17), run by Team 17 | Evaluation deployment at `c875f14` | 17 of 17 passed, including 500 malformed requests for AC-13 with no server errors | 2026-11-22 17:30 UTC |
 | AC-19 restart demo (`scripts/restart_demo.sh prod`, recorded) | Evaluation deployment, revision `team17-prod-00011-qqg` replaced by `team17-prod-00012-wnv` | Ticket, early-warning report, and audit log read back byte-for-byte unchanged | 2026-11-22 18:14 UTC |
+| Deployed tester (241 tests), run from the evaluation deployment | Team 21's deployment | 233 passed, 8 failed, all Team 21 deviations from agreed rules: 400 instead of 404 for an unknown ticket with a bad body (4), 404 reading a resolved ticket's draft instead of 200 (Q3; 3), 400 instead of 422 for an awareness change without a reason (1). Team 21 reported 322 of 964 source lines covered | 2026-11-22 18:52 to 19:00 UTC |
 | AC-18 performance | Development deployment after #116 | PASS: p95 828 ms (the run before #116 failed at p95 1,373 ms) | 2026-11-22 16:40 UTC |
 | CI at `c875f14` | Linux, Python 3.12, PostgreSQL 18 | 1,684 tests, lint, migration and Django checks passed ([run](https://github.com/team17-ece30861/cra-service/actions/runs/45046366880)) | 2026-11-22 |
 | Acceptance suite (222 tests) | Development deployment at `ec62594` | 222 passed, 0 failed | 2026-11-01 15:56 to 16:15 UTC |
@@ -254,8 +255,7 @@ is in this repository ([tests/](../tests/README.md)) and has been checked by Tea
 | CI (every PR) | Same | Full test suite, lint, migration and Django checks; nothing merges or deploys unless it passes | Ongoing |
 
 Team 17 runs its suite against the development deployment and Team 21's deployment. It ran
-against the evaluation deployment right after each release (Phases 3, 4 and 5), for the report.
-Our suite's final run against Team 21's deployment is in the Phase 5 report. The Phase 3 runs (55 of 55 on both deployments) are
+against the evaluation deployment right after each release (Phases 3, 4 and 5), for the report. The Phase 3 runs (55 of 55 on both deployments) are
 recorded in the [Phase 3 version](https://github.com/team17-ece30861/cra-service/blob/main/docs/phase3.md).
 
 **GenAI corrections caught by checking:** an independent AI session, one that hadn't drawn
@@ -275,8 +275,9 @@ also had an independent agent review posted on its pull request before it merged
   deployed-tester run fits; one run holds one worker while it lasts, and a second run is
   refused with 409). Each worker keeps its database connection for 5 minutes and API
   responses are gzipped for clients that ask, which cut the server time of a simple read
-  from about 190 ms to about 40 ms on our development deployment (2026-11-22). The AC-18
-  measurement (1,000 tickets, 200 requests, REQ-17) is in the Phase 5 report. Send
+  from about 190 ms to about 40 ms on our development deployment (2026-11-22). AC-18 (REQ-17)
+  passed on the evaluation deployment at `c875f14`: with 1,000 tickets, 200 requests one at a
+  time had p95 736 ms and a maximum of 1,750 ms (a filtered list). Send
   `GET /health` and one authenticated read before timing anything.
 - **Spending cap (LIM-03):** a $10 spending cap stops the service until we lift it by
   hand. Any server error (5xx) now emails Team 17 automatically, but a stopped service
@@ -286,10 +287,9 @@ also had an independent agent review posted on its pull request before it merged
   available (Art. 14(2)(c), Q8). The system can't tell a fix from a workaround, so record
   the workaround's release time there if it came first. See
   [Team 17's CRA review](https://github.com/team17-ece30861/cra-service/blob/main/docs/reports/risk1-cra-review.md).
-- **Shared contract copy behind ours (LIM-05):** this service follows contract 0.3.0 (Q7: a
-  future fix time on submit is 422; Q9: `member_states` may be exactly `["unknown"]`; Q8
-  wording). The shared copy in `pod-k-shared` changes only when Team 21 approves the 0.3.0
-  pull request, so until then it still describes the older behavior.
+- **Shared contract copy (LIM-05):** fixed in Phase 5. Contract 0.3.0 (Q7: a future fix time
+  on submit is 422; Q9: `member_states` may be exactly `["unknown"]`; Q8 wording) is merged in
+  this repository (#20, 2026-11-22), so the shared copy, ours, and our tester's are identical.
 - **Empty lists in mixed updates (LIM-07):** an update that changes a real field and also
   sends an empty list for a list that was never set records that list as a change in the
   audit entry, even though no read shows a difference (Phase 5).
