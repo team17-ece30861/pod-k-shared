@@ -107,6 +107,7 @@ part of the shared spec, so it changes neither the contract nor what Team 21 tes
 | --- | --- |
 | `POST /test/setup`, `GET /test/report` | The course's cross-team testing interface: a tester registers a session, then reads its report. Needs the token, not `X-Actor` (Q10). Sessions survive a reset. |
 | `POST /tester/test/setup`, `POST /tester/test/run`, `GET /tester/test/report` | Our deployed tester: runs the acceptance suite against a target's base URL in a subprocess, with only that target's token, and keeps the report. |
+| `interface/` | OpenAPI descriptions of these two: [`tester.yaml`](interface/tester.yaml) (our tester's three endpoints) and [`system.yaml`](interface/system.yaml) (the system's `/test/setup` and `/test/report`, plus the pod contract's paths by reference). Team 17's CI checks real responses against them. |
 | `/console/` | The console (see above). Session sign-in instead of the token. Live on both deployments since the 2026-11-01 release. |
 
 Where the contract is silent (error precedence details, timestamp variants, how

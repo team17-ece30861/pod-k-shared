@@ -31,6 +31,12 @@ leaves room for interpretation. Maintained by Team 17. For what's implemented, s
   and don't count either toward timings.
 - **Leave it clean:** when you finish, `POST /test/reset` and then `DELETE /test/clock`, so
   it's empty and on real time.
+- **Course testing interface:** the system's `POST /test/setup` and `GET /test/report`, and
+  our tester at `/tester/test/*`, are described in [`interface/system.yaml`](interface/system.yaml)
+  and [`interface/tester.yaml`](interface/tester.yaml) (OpenAPI 3.1). Their errors carry the
+  course's `message` and `source`. If a tester run aborts (for example at its 28-minute
+  limit), the stored report keeps every finished test, marks the one it interrupted
+  `error` with source `tester`, and the rest `skip`.
 
 ## A first run
 
