@@ -1,14 +1,34 @@
 openapi: 3.1.0
 info:
   title: CRA Article 14 Reporting Service (Pod Common Interface)
-  version: 0.1.0-draft
+  version: 0.2.0
   summary: Shared cross-team testing interface for Teams 17 and 21, ECE 30861.
   description: |
     Translated from Phase 2, Section 5 (pod spec agreed September 25, 2026).
     Requirement IDs (REQ-xx) and acceptance criteria (AC-xx) refer to Sections 3 and 4.
 
-    **Status:** DRAFT for pod review. Phase 3 freezes the operations tagged `phase-3`.
-    Operations tagged `phase-4` are included so schemas stay in one place, and may change.
+    **Status:** operations tagged `phase-3` are frozen as of 2026-11-01 (0.2.0, agreed by
+    Teams 17 and 21). Operations tagged `phase-4` are included so schemas stay in one place,
+    and may still change by pod agreement.
+
+    **Agreed clarifications** (Team 17's questions Q1 to Q6 and Q10, answered by Team 21 by
+    email on 2026-11-01; wording only, no schema changes):
+    - Q1: triage as `not_actively_exploited` or `invalid` that also sends `aware_at` is
+      accepted; `aware_at` is ignored and stays null.
+    - Q2: List tickets breaks ties (equal or null `next_due_at`) by `received_at`, oldest
+      first. Teams may add a final tie-break (e.g. by `id`) so the order is total.
+    - Q3: Get draft returns 409 for a ticket that never became reportable. A ticket closed as
+      `resolved` still returns its reports (the locked copies once recorded).
+    - Q4: a recorded report's status is recalculated against its current `due_at`, so a later
+      change to `aware_at` or `fix.available_at` can turn `submitted` into `submitted_late`.
+    - Q5: `submitted_at` must only be between `aware_at` and now; no rule against the previous
+      report's `submitted_at`.
+    - Q6: an update that changes nothing succeeds (200) but adds no audit entry.
+    - Q10: `POST /test/setup` does not require `X-Actor` (no `/test/*` endpoint does).
+    Still open: Q7 (reject a future `fix.available_at` on submit with 422) and Q9 (allow
+    "unknown" member states and versions) are agreed in principle but change the contract,
+    so each comes as its own PR. Q8 (does a workaround start the final-report clock) is
+    unanswered.
 
     **Conventions**
     - All request and response bodies are JSON, up to 64 KB (65,536 bytes). Larger bodies return 413.
@@ -22,7 +42,8 @@ info:
     - Unknown fields and system-set fields in request bodies return 400.
     - If several errors apply, the first in this order is returned: 401, 413, 404, 400, 409, 422.
     - A failed request changes nothing. Submit, triage, update, record submission, and close
-      each add exactly one audit entry when they succeed. Reads never change data.
+      each add exactly one audit entry when they succeed (an update that changes nothing adds
+      none, Q6). Reads never change data.
     - Obligation status is computed from stored times and the current (possibly fixed) clock.
 servers:
   - url: https://team17-prod.example.run.app
@@ -35,7 +56,7 @@ security:
 
 tags:
   - name: phase-3
-    description: Frozen for Phase 3 (REQ-01 to REQ-04, REQ-12 to REQ-14, REQ-16).
+    description: Frozen 2026-11-01 (REQ-01 to REQ-04, REQ-12 to REQ-14, REQ-16).
   - name: phase-4
     description: Full reporting workflow (REQ-05 to REQ-11, REQ-15). May change in Phase 4.
   - name: testing
