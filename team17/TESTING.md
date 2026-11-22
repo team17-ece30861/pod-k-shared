@@ -27,6 +27,10 @@ leaves room for interpretation. Maintained by Team 17. For what's implemented, s
   | First request that reads the database after that | about 1.5 seconds |
   | Warm requests | under 0.5 seconds |
 
+  Since Phase 5 (2026-11-22) each server worker keeps its database connection, so warm
+  requests got faster (about 40 ms server time for a simple read on Team 17's development
+  server, measured from Cloud Run's logs; your round trip adds network time).
+
   Send `GET /health` and one authenticated read (`GET /tickets`) before timing anything,
   and don't count either toward timings.
 - **Leave it clean:** when you finish, `POST /test/reset` and then `DELETE /test/clock`, so
@@ -101,12 +105,20 @@ the pod can settle it for both teams.
 | Fractional seconds | Accepted and truncated, never rounded (`09:00:00.789Z` becomes `09:00:00Z`). |
 | Does reset release a frozen clock? | No. Reset deletes tickets, reports, and audit entries only. `DELETE /test/clock` returns to real time. |
 
+### Responses
+
+| Question | Team 17's behavior |
+|---|---|
+| Compression | Since Phase 5, an API response of 200 bytes or more is gzip-compressed when the request sends `Accept-Encoding: gzip` (Python `requests`, browsers, and `curl --compressed` send it by default). Such responses carry `Content-Encoding: gzip`, and `Content-Length` is the compressed size. Without that header you get the same bytes as before. Responses of 200 bytes or more also carry `Vary: Accept-Encoding`. Console pages and static files are never compressed. |
+| Console sign-in | Five failed sign-ins for one username within 15 minutes lock that username for 15 minutes from the fifth failure, whether or not the account exists. `POST /test/reset` doesn't clear a lock. The API and its token are unaffected. |
+
 ### Tickets
 
 | Question | Team 17's behavior |
 |---|---|
 | Triage as `invalid` or `not_actively_exploited` with an `aware_at` | Accepted (200). `aware_at` is ignored and stays `null` (Q1, agreed 2026-11-01). |
-| `POST /tickets` with `fix.available_at` later than now | Accepted (201). The contract lists no 422 for submit. Q7: the pod agreed in principle to reject it with 422; that waits for a contract PR. |
+| `POST /tickets` with `fix.available_at` later than now | 422 with `field: "fix.available_at"` (must not be later than now), the same rule `PATCH` uses. A fix time equal to now is accepted (Q7, contract 0.3.0). |
+| `member_states: ["unknown"]` | Accepted on submit and `PATCH`, for when the Member States aren't known yet. It is returned as sent and counts as filled in for every draft and recorded report that needs member states. `"unknown"` together with any country code returns 400 (Q9, contract 0.3.0). |
 | `PATCH` and a stored future fix time | Only a fix time the request sends is checked against now. Editing other fields never fails because of a stored one. |
 | `PATCH` merging | Nested objects merge one level deep, lists are replaced whole, and `null` clears an optional field. `title`, `description`, and `product.manufacturer`/`name` can't be cleared (400). |
 | `PATCH` that changes nothing | 200 with the current ticket, and **no** audit entry (Q6, agreed 2026-11-01). "Nothing" means the single-ticket view is identical: `[]` or `null` for a list that was never set is no change. A reporter-only change does add an entry, with the reporter left out of `changes`. |
@@ -116,11 +128,20 @@ the pod can settle it for both teams.
 | Drafts for a ticket that never became reportable | 409 (Q3, agreed 2026-11-01). A ticket closed as `resolved` still returns all four drafts, with the locked copies for recorded reports. |
 | Status of a recorded report | Recalculated against the current `due_at`, so an edit that moves a deadline earlier can turn `submitted` into `submitted_late` (Q4, agreed 2026-11-01). If the fix time is cleared after the final report is recorded, it shows `submitted` with `due_at: null`. Moving the test clock never changes a recorded report's status. |
 | Record submission body | Optional. With no `submitted_at`, the current (possibly fixed) clock is used. `submitted_at` must be between `aware_at` and now; there's no rule against the previous report's time (Q5, agreed 2026-11-01). |
-| Record submission errors | 409 (not reportable, previous report missing, or already recorded) is checked before 422 (missing Model C fields and a bad `submitted_at`, reported together in one `errors` list). |
+| Record submission errors | 409 (not reportable, previous report missing, or already recorded) is checked before 422 (missing Model C fields and a bad `submitted_at`, reported together in one `errors` list). Every 422 lists all the business-rule problems found, not only the first (contract 0.3.0). |
 | Audit entry for a recorded report | One `report_submitted` entry with one change: `field: "reports.<type>"`, `old: null`, `new` holding `submitted_at`, `reference`, `content`, and `actor`. |
 | Closing | 409 unless the ticket is `reportable` with all three reports recorded. A closed ticket rejects every change with 409 and stays readable. |
 | Reporter details | Only in `GET /tickets/{id}`. Never in lists, drafts, recorded reports, audit entries, or errors. |
 | `POST /test/setup` and `X-Actor` | Not required, like every `/test/*` endpoint (Q10, agreed 2026-11-01). |
+
+### Team 17's deployed tester
+
+| Question | Team 17's behavior |
+|---|---|
+| Two runs at once | Refused. While a run is going, `POST /tester/test/run` for another session and `POST /tester/test/setup` both return 409 ("Another test run is in progress"), with the course's `message` and `source: "tester"`. Try again when the run ends. |
+| A run that gets cut off | The tester records each finished test as it goes. A run that stops sending heartbeats for 3 minutes (for example, because its server instance was replaced) is taken for cut off: the next request stores its report from the recorded outcomes, and the session no longer blocks new runs. |
+| The target after a run | When a run finishes, the tester releases the target's test clock and resets it, so the target is left empty and on real time. A run that was already taken for cut off doesn't clean up, because a newer run may be using the target. |
+| `coverage.model` in the report | Included only when the target is Team 17's own system (the course's Phase 5 rule: tester and target from the same team). `total` is our 44 design requirements, `covered` is how many this run evaluated, and `basis` links to our published requirement-to-test mapping. Against Team 21's system it is left out. |
 
 ## For coding agents
 

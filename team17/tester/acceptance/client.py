@@ -1,4 +1,5 @@
 import json
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.error import HTTPError
@@ -9,6 +10,9 @@ import yaml
 from jsonschema import Draft202012Validator, FormatChecker
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
+
+from acceptance.model_coverage import model_scenario
+from acceptance.observations import observe_operation_check
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -123,7 +127,7 @@ class Service:
         self.contract = Contract()
         self.operation_checks = []
 
-    def expect(self, method, path, status, *, template=None, **kwargs):
+    def expect(self, method, path, status, *, template=None, model_status=None, **kwargs):
         operation_path = template or path
         check = None
         if method.lower() in self.contract.document["paths"].get(operation_path, {}):
@@ -135,12 +139,19 @@ class Service:
                 "conforms": False,
             }
             self.operation_checks.append(check)
+            observe_operation_check(check)
         response = self.transport.send(method, path, **kwargs)
         if check is not None:
             check["actual_status"] = response.status
-        assert response.status == status, (
-            f"{method} {template or path}: expected {status}, got {response.status}"
+        checkpoint = (
+            model_scenario(model_status)
+            if model_status is not None and (response.status < 500 or response.status == status)
+            else nullcontext()
         )
+        with checkpoint:
+            assert response.status == status, (
+                f"{method} {template or path}: expected {status}, got {response.status}"
+            )
         body = self.contract.validate(method, operation_path, response)
         if check is not None:
             check["conforms"] = True
