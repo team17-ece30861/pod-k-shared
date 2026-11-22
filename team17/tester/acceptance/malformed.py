@@ -12,6 +12,8 @@ The expected status follows the contract's precedence (401, 413, 404, 400, 409, 
 an invalid path `type` is 404, a body over 64 KB is 413, anything else is 400. Every
 response must be that status, documented for the operation, and a problem+json body
 that matches the contract's error schema. Afterwards the stored data must be unchanged.
+Failure reports retain status, media-type conformance and body size, but omit target
+response bodies and exception messages because either may reflect credentials.
 
 The same corpus runs in CI (`tests/test_malformed_requests.py`, Django test client) and
 against a deployment:
@@ -487,18 +489,18 @@ def check_response(contract: Contract, request: MalformedRequest, response: Resp
         problems.append(f"status {response.status} is not documented for {request.operation}")
     media_type = response.content_type.split(";", 1)[0].strip().lower()
     if media_type != PROBLEM:
-        problems.append(f"media type {media_type or '(none)'}, expected {PROBLEM}")
+        problems.append(f"media type does not match {PROBLEM}")
         return problems
     try:
         if str(response.status) in documented:
             body = contract.validate(method, template, response)
         else:
             body = _validate_global(contract, response)
-    except (AssertionError, ValueError) as error:
-        problems.append(f"body does not match the contract: {error}")
+    except (AssertionError, ValueError):
+        problems.append("body does not match the contract")
         return problems
     if isinstance(body, dict) and body.get("status") != response.status:
-        problems.append(f"problem status {body.get('status')!r} != HTTP {response.status}")
+        problems.append(f"problem status does not match HTTP {response.status}")
     return problems
 
 
@@ -517,7 +519,7 @@ def _validate_global(contract, response):
         ).iter_errors(body)
     )
     if errors:
-        raise AssertionError("; ".join(e.message for e in errors))
+        raise AssertionError("body does not match the global error schema")
     return body
 
 
@@ -536,15 +538,23 @@ def run(service: Service, send_raw, corpus, seeds: dict[str, str], progress=None
         try:
             response = send_raw(request.method, path, dict(request.headers), request.body)
         except (OSError, URLError, HTTPException) as error:
-            results.append({"request": request, "status": None, "problems": [repr(error)]})
+            results.append(
+                {
+                    "request": request,
+                    "status": None,
+                    "problems": [f"transport failed ({type(error).__name__})"],
+                }
+            )
             continue
         problems = check_response(contract, request, response)
         result = {"request": request, "status": response.status, "problems": problems}
         if problems:
             result["response"] = {
                 "status": response.status,
-                "content_type": response.content_type,
-                "body": response.body[:2000].decode("utf-8", errors="backslashreplace"),
+                "problem_media_type": (
+                    response.content_type.split(";", 1)[0].strip().lower() == PROBLEM
+                ),
+                "body_bytes": len(response.body),
             }
         results.append(result)
         if 200 <= response.status < 300 and request.method in MUTATING and role:
@@ -696,7 +706,7 @@ def main(argv=None) -> int:
     try:
         existing = service.list()  # also checks the URL and token before anything changes
     except AssertionError as error:
-        print(f"Preflight GET /tickets failed: {error}", file=sys.stderr)
+        print(f"Preflight GET /tickets failed ({type(error).__name__})", file=sys.stderr)
         return 2
     if args.reset:
         print(
@@ -733,24 +743,29 @@ def main(argv=None) -> int:
         summary["base_url"] = transport.base_url
         print_summary(summary, show=args.show)
     finally:
-        if args.out and summary is not None:
-            with open(args.out, "w", encoding="utf-8") as handle:
-                json.dump(summary, handle, indent=2, ensure_ascii=False)
-            print(f"Wrote {args.out}")
-        if summary is None:
-            print("The run stopped before it finished; see the error below.", file=sys.stderr)
-        if args.reset:
-            # Each step runs even if the other fails, and a failure here is reported
-            # without replacing an error already on its way out.
-            for method, path in (("POST", "/test/reset"), ("DELETE", "/test/clock")):
-                try:
-                    service.expect(method, path, 204, actor=None)
-                    print(f"Cleanup: {method} {path} done.")
-                except Exception as error:
-                    cleanup_failed = True
-                    print(f"Cleanup: {method} {path} FAILED: {error!r}", file=sys.stderr)
-        elif outcome["seeds"]:
-            print(f"Left seed tickets on the target: {', '.join(outcome['seeds'].values())}")
+        try:
+            if args.out and summary is not None:
+                with open(args.out, "w", encoding="utf-8") as handle:
+                    json.dump(summary, handle, indent=2, ensure_ascii=False)
+                print(f"Wrote {args.out}")
+        finally:
+            if summary is None:
+                print("The run stopped before it finished; see the error below.", file=sys.stderr)
+            if args.reset:
+                # Each step runs even if the other fails, and a failure here is reported
+                # without replacing an error already on its way out.
+                for method, path in (("POST", "/test/reset"), ("DELETE", "/test/clock")):
+                    try:
+                        service.expect(method, path, 204, actor=None)
+                        print(f"Cleanup: {method} {path} done.")
+                    except Exception as error:
+                        cleanup_failed = True
+                        print(
+                            f"Cleanup: {method} {path} FAILED ({type(error).__name__})",
+                            file=sys.stderr,
+                        )
+            elif outcome["seeds"]:
+                print(f"Left seed tickets on the target: {', '.join(outcome['seeds'].values())}")
 
     ok = (
         not summary["failures"]
