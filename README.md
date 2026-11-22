@@ -61,7 +61,7 @@ other team.
 | Other team's Phase 3 suite passes against this deployment | Done, 2026-11-01 (Team 21's suite) | Done, 55/55, 2026-10-18 (Team 17's suite) |
 | Other team's Phase 4 suite passes against this deployment | Done, 17/17, 2026-11-01 (Team 21's suite) | Done, 222/222, 2026-11-01 (Team 17's suite) |
 | Phase 3 operations frozen in the shared contract (both teams) | Done, 2026-11-22 (#14) | ⬜ |
-| Own AC-18 performance run (1,000 tickets, p95 ≤ 1 s) passes against own deployment | `<Orbit AC-18 result after the launch>` | Team 21 to fill |
+| Own AC-18 performance run (1,000 tickets, p95 ≤ 1 s) passes against own deployment | ✅ Passed on Orbit at `c875f14`, 2026-11-22: p95 736 ms over 200 requests with 1,000 tickets, 0 unexpected | Team 21 to fill |
 | Other team's Phase 5 suite passes against this deployment | ⬜ | ⬜ |
 
 ### Team 17's deployment
