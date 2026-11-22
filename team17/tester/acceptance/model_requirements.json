@@ -1,0 +1,1336 @@
+{
+  "version": "team17-phase5-design-v1",
+  "schema_version": 1,
+  "source_revision": "ecb59a7bc5d2c1c6046c719a8b943259f520a2f1",
+  "mapping_document": "docs/model-coverage.md",
+  "requirements": [
+    {
+      "id": "A-01",
+      "description": "Intake produces distinct IDs in `received`, with the fixed service receipt time and no awareness time.",
+      "scenarios": [
+        {
+          "id": "A-01.intake",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac01_intake_has_unique_ids_and_fixed_receipt_time"
+        }
+      ]
+    },
+    {
+      "id": "A-02",
+      "description": "Valid exploitation triage enters `reportable`; missing awareness/reason, future awareness, and retriage are rejected without changing the ticket.",
+      "scenarios": [
+        {
+          "id": "A-02.reportable_e1",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac03_model_d_exact_deadlines_and_statuses[E1]"
+        },
+        {
+          "id": "A-02.reportable_e2",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac03_model_d_exact_deadlines_and_statuses[E2]"
+        },
+        {
+          "id": "A-02.reportable_e3",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac03_model_d_exact_deadlines_and_statuses[E3]"
+        },
+        {
+          "id": "A-02.reportable_e4",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac03_model_d_exact_deadlines_and_statuses[E4]"
+        },
+        {
+          "id": "A-02.reportable_e5",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac03_model_d_exact_deadlines_and_statuses[E5]"
+        },
+        {
+          "id": "A-02.missing_awareness",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac04_rejected_triage_preserves_ticket[missing-awareness]"
+        },
+        {
+          "id": "A-02.future_awareness",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac04_rejected_triage_preserves_ticket[future-awareness]"
+        },
+        {
+          "id": "A-02.missing_reason",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac04_rejected_triage_preserves_ticket[missing-reason]"
+        },
+        {
+          "id": "A-02.retriage",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac04_retriage_is_conflict_and_changes_nothing"
+        }
+      ]
+    },
+    {
+      "id": "A-03",
+      "description": "Both non-exploitation decisions close the ticket with the matching resolution; edits, regulatory submissions, and resolution are rejected, while the detail remains readable.",
+      "scenarios": [
+        {
+          "id": "A-03.invalid",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac05_closed_ticket_remains_readable_and_rejects_changes[invalid]"
+        },
+        {
+          "id": "A-03.submission_early_warning_invalid",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[early_warning-invalid]"
+        },
+        {
+          "id": "A-03.submission_notification_invalid",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[notification-invalid]"
+        },
+        {
+          "id": "A-03.submission_final_report_invalid",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[final_report-invalid]"
+        },
+        {
+          "id": "A-03.resolution_invalid",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_never_reportable_tickets_cannot_be_resolved[invalid]"
+        },
+        {
+          "id": "A-03.not_actively_exploited",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac05_closed_ticket_remains_readable_and_rejects_changes[not_actively_exploited]"
+        },
+        {
+          "id": "A-03.submission_early_warning_not_actively_exploited",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[early_warning-not_actively_exploited]"
+        },
+        {
+          "id": "A-03.submission_notification_not_actively_exploited",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[notification-not_actively_exploited]"
+        },
+        {
+          "id": "A-03.submission_final_report_not_actively_exploited",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[final_report-not_actively_exploited]"
+        },
+        {
+          "id": "A-03.resolution_not_actively_exploited",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_never_reportable_tickets_cannot_be_resolved[not_actively_exploited]"
+        }
+      ]
+    },
+    {
+      "id": "A-04",
+      "description": "Allowed detail edits preserve unspecified nested fields; awareness edits require a reason and reportable state, reject future awareness and fix times, and immediately recalculate deadlines without partial changes.",
+      "scenarios": [
+        {
+          "id": "A-04.merge_details",
+          "test": null
+        },
+        {
+          "id": "A-04.awareness_reason",
+          "test": null
+        },
+        {
+          "id": "A-04.awareness_received",
+          "test": null
+        },
+        {
+          "id": "A-04.future_awareness",
+          "test": null
+        },
+        {
+          "id": "A-04.future_fix",
+          "test": null
+        },
+        {
+          "id": "A-04.deadline_recalculation",
+          "test": null
+        },
+        {
+          "id": "A-04.audit_values",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "A-05",
+      "description": "Regulatory reports record only while reportable, in predecessor order, once per type; missing fields and an out-of-interval timestamp reject recording without changes.",
+      "scenarios": [
+        {
+          "id": "A-05.record_early_warning",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_records_locked_content_and_one_audit_entry[early_warning]"
+        },
+        {
+          "id": "A-05.duplicate_early_warning",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_duplicate_precedes_missing_fields_and_future_time[early_warning]"
+        },
+        {
+          "id": "A-05.state_early_warning_received",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[early_warning-received]"
+        },
+        {
+          "id": "A-05.state_early_warning_invalid",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[early_warning-invalid]"
+        },
+        {
+          "id": "A-05.state_early_warning_not_actively_exploited",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[early_warning-not_actively_exploited]"
+        },
+        {
+          "id": "A-05.early_warning_before_awareness",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_submission_interval_is_inclusive[before-awareness-early_warning]"
+        },
+        {
+          "id": "A-05.early_warning_at_awareness",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_submission_interval_is_inclusive[at-awareness-early_warning]"
+        },
+        {
+          "id": "A-05.early_warning_at_now",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_submission_interval_is_inclusive[at-now-early_warning]"
+        },
+        {
+          "id": "A-05.early_warning_after_now",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_submission_interval_is_inclusive[after-now-early_warning]"
+        },
+        {
+          "id": "A-05.record_notification",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_records_locked_content_and_one_audit_entry[notification]"
+        },
+        {
+          "id": "A-05.duplicate_notification",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_duplicate_precedes_missing_fields_and_future_time[notification]"
+        },
+        {
+          "id": "A-05.state_notification_received",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[notification-received]"
+        },
+        {
+          "id": "A-05.state_notification_invalid",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[notification-invalid]"
+        },
+        {
+          "id": "A-05.state_notification_not_actively_exploited",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[notification-not_actively_exploited]"
+        },
+        {
+          "id": "A-05.notification_before_awareness",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_submission_interval_is_inclusive[before-awareness-notification]"
+        },
+        {
+          "id": "A-05.notification_at_awareness",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_submission_interval_is_inclusive[at-awareness-notification]"
+        },
+        {
+          "id": "A-05.notification_at_now",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_submission_interval_is_inclusive[at-now-notification]"
+        },
+        {
+          "id": "A-05.notification_after_now",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_submission_interval_is_inclusive[after-now-notification]"
+        },
+        {
+          "id": "A-05.record_final_report",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_records_locked_content_and_one_audit_entry[final_report]"
+        },
+        {
+          "id": "A-05.duplicate_final_report",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_duplicate_precedes_missing_fields_and_future_time[final_report]"
+        },
+        {
+          "id": "A-05.state_final_report_received",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[final_report-received]"
+        },
+        {
+          "id": "A-05.state_final_report_invalid",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[final_report-invalid]"
+        },
+        {
+          "id": "A-05.state_final_report_not_actively_exploited",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_nonreportable_tickets_reject_recording_without_changes[final_report-not_actively_exploited]"
+        },
+        {
+          "id": "A-05.final_report_before_awareness",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_submission_interval_is_inclusive[before-awareness-final_report]"
+        },
+        {
+          "id": "A-05.final_report_at_awareness",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_submission_interval_is_inclusive[at-awareness-final_report]"
+        },
+        {
+          "id": "A-05.final_report_at_now",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_submission_interval_is_inclusive[at-now-final_report]"
+        },
+        {
+          "id": "A-05.final_report_after_now",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_submission_interval_is_inclusive[after-now-final_report]"
+        },
+        {
+          "id": "A-05.predecessor_notification",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_predecessor_conflict_precedes_missing_fields_and_future_time[notification]"
+        },
+        {
+          "id": "A-05.predecessor_final_report",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_predecessor_conflict_precedes_missing_fields_and_future_time[final_report]"
+        },
+        {
+          "id": "A-05.missing_fields_sequence",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_full_recording_sequence_has_no_audit_gaps_after_failures"
+        }
+      ]
+    },
+    {
+      "id": "A-06",
+      "description": "Resolution succeeds only for a reportable ticket with all three report types recorded; zero, one, or two recorded reports and never-reportable tickets cannot close as resolved.",
+      "scenarios": [
+        {
+          "id": "A-06.outstanding_0",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_outstanding_reports_reject_closure_without_changes[0]"
+        },
+        {
+          "id": "A-06.outstanding_1",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_outstanding_reports_reject_closure_without_changes[1]"
+        },
+        {
+          "id": "A-06.outstanding_2",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_outstanding_reports_reject_closure_without_changes[2]"
+        },
+        {
+          "id": "A-06.state_received",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_never_reportable_tickets_cannot_be_resolved[received]"
+        },
+        {
+          "id": "A-06.state_invalid",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_never_reportable_tickets_cannot_be_resolved[invalid]"
+        },
+        {
+          "id": "A-06.state_not_actively_exploited",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_never_reportable_tickets_cannot_be_resolved[not_actively_exploited]"
+        },
+        {
+          "id": "A-06.resolved",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_all_three_reports_allow_one_atomic_close_and_remain_readable"
+        }
+      ]
+    },
+    {
+      "id": "A-07",
+      "description": "A resolved ticket is read-only for every declared change operation and retains readable report snapshots.",
+      "scenarios": [
+        {
+          "id": "A-07.details",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_resolved_ticket_rejects_every_change[details]"
+        },
+        {
+          "id": "A-07.awareness",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_resolved_ticket_rejects_every_change[awareness]"
+        },
+        {
+          "id": "A-07.triage",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_resolved_ticket_rejects_every_change[triage]"
+        },
+        {
+          "id": "A-07.early",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_resolved_ticket_rejects_every_change[early]"
+        },
+        {
+          "id": "A-07.notification",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_resolved_ticket_rejects_every_change[notification]"
+        },
+        {
+          "id": "A-07.final",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_resolved_ticket_rejects_every_change[final]"
+        },
+        {
+          "id": "A-07.close",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_resolved_ticket_rejects_every_change[close]"
+        },
+        {
+          "id": "A-07.readable_reports",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_all_three_reports_allow_one_atomic_close_and_remain_readable"
+        }
+      ]
+    },
+    {
+      "id": "A-08",
+      "description": "Every successful ticket change records exact sequence, actor, time, action, reason and allowed old/new field values; failures add nothing and audit entries cannot be edited/deleted. A real edit adds an entry and a no-op does not.",
+      "scenarios": [
+        {
+          "id": "A-08.sequence_actor_time_reason",
+          "test": null
+        },
+        {
+          "id": "A-08.immutable",
+          "test": null
+        },
+        {
+          "id": "A-08.noop",
+          "test": null
+        },
+        {
+          "id": "A-08.real_edit",
+          "test": null
+        },
+        {
+          "id": "A-08.old_new_intake",
+          "test": null
+        },
+        {
+          "id": "A-08.old_new_triage",
+          "test": null
+        },
+        {
+          "id": "A-08.old_new_patch",
+          "test": null
+        },
+        {
+          "id": "A-08.old_new_submission",
+          "test": null
+        },
+        {
+          "id": "A-08.old_new_close",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "B-01",
+      "description": "All obligations are `not_applicable` before reportable triage and after either not-reportable closure, with no due times in the closed case.",
+      "scenarios": [
+        {
+          "id": "B-01.received",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac01_intake_has_unique_ids_and_fixed_receipt_time"
+        },
+        {
+          "id": "B-01.invalid",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac05_closed_ticket_remains_readable_and_rejects_changes[invalid]"
+        },
+        {
+          "id": "B-01.not_actively_exploited",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac05_closed_ticket_remains_readable_and_rejects_changes[not_actively_exploited]"
+        }
+      ]
+    },
+    {
+      "id": "B-02",
+      "description": "An unrecorded final report awaits a fix; adding a fix creates its deadline/status; clearing a fix returns an unrecorded report to `awaiting_fix`, including from pending and overdue.",
+      "scenarios": [
+        {
+          "id": "B-02.awaiting_fix",
+          "test": null
+        },
+        {
+          "id": "B-02.fix_added",
+          "test": null
+        },
+        {
+          "id": "B-02.clear_pending",
+          "test": null
+        },
+        {
+          "id": "B-02.clear_overdue",
+          "test": null
+        },
+        {
+          "id": "B-02.overdue_at_triage",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "B-03",
+      "description": "An unrecorded report is pending at its exact due time and overdue one second later; moving the clock back can restore pending.",
+      "scenarios": [
+        {
+          "id": "B-03.due",
+          "test": null
+        },
+        {
+          "id": "B-03.overdue",
+          "test": null
+        },
+        {
+          "id": "B-03.clock_back",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "B-04",
+      "description": "Recorded on-time/late status compares submitted time to the deadline, including equality; moving now backward does not change that recorded status. Ticket, list and draft metadata agree.",
+      "scenarios": [
+        {
+          "id": "B-04.on_time_and_late",
+          "test": "test_listing.py::TestRemoteStatuses::test_ac06_steps_through_e6_and_records_on_time_and_late"
+        },
+        {
+          "id": "B-04.view_agreement",
+          "test": "test_listing.py::TestRemoteStatuses::test_ac06_steps_through_e6_and_records_on_time_and_late"
+        },
+        {
+          "id": "B-04.equality",
+          "test": "test_listing.py::TestRemoteStatuses::test_ac06_a_report_recorded_exactly_at_its_due_time_is_on_time"
+        },
+        {
+          "id": "B-04.clock_back",
+          "test": "test_listing.py::TestRemoteStatuses::test_ac06_moving_the_clock_back_does_not_change_a_recorded_status"
+        }
+      ]
+    },
+    {
+      "id": "B-05",
+      "description": "Editing a deadline can move a recorded report between submitted and submitted-late; a recorded final report with its fix cleared follows the documented submitted fallback.",
+      "scenarios": [
+        {
+          "id": "B-05.deadline_earlier",
+          "test": null
+        },
+        {
+          "id": "B-05.deadline_later",
+          "test": null
+        },
+        {
+          "id": "B-05.clear_recorded_final",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "C-01",
+      "description": "The complete content of all four draft types matches Model C's allowlists, including advisory optional fields and excluding reporter fields.",
+      "scenarios": [
+        {
+          "id": "C-01.early_warning",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_complete_live_draft_matches_model_c[early_warning]"
+        },
+        {
+          "id": "C-01.notification",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_complete_live_draft_matches_model_c[notification]"
+        },
+        {
+          "id": "C-01.final_report",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_complete_live_draft_matches_model_c[final_report]"
+        },
+        {
+          "id": "C-01.user_advisory",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_complete_live_draft_matches_model_c[user_advisory]"
+        }
+      ]
+    },
+    {
+      "id": "C-02",
+      "description": "Missing required fields update correctly as fields are filled or cleared; empty required values are still missing, and optional values do not become requirements.",
+      "scenarios": [
+        {
+          "id": "C-02.fill_sequence",
+          "test": null
+        },
+        {
+          "id": "C-02.clear_fields",
+          "test": null
+        },
+        {
+          "id": "C-02.empty_values",
+          "test": null
+        },
+        {
+          "id": "C-02.optional_fields",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "C-03",
+      "description": "Reads do not mutate tickets/audit; a recorded regulatory report keeps locked content after edits, while unrecorded drafts use current fields.",
+      "scenarios": [
+        {
+          "id": "C-03.repeated_early_warning",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_repeated_reads_leave_ticket_and_audit_unchanged"
+        },
+        {
+          "id": "C-03.repeated_notification",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_repeated_reads_leave_ticket_and_audit_unchanged"
+        },
+        {
+          "id": "C-03.repeated_final_report",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_repeated_reads_leave_ticket_and_audit_unchanged"
+        },
+        {
+          "id": "C-03.repeated_user_advisory",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_repeated_reads_leave_ticket_and_audit_unchanged"
+        },
+        {
+          "id": "C-03.no_read_mutation",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_repeated_reads_leave_ticket_and_audit_unchanged"
+        },
+        {
+          "id": "C-03.locked_early_warning",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_records_locked_content_and_one_audit_entry[early_warning]"
+        },
+        {
+          "id": "C-03.locked_notification",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_records_locked_content_and_one_audit_entry[notification]"
+        },
+        {
+          "id": "C-03.locked_final_report",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_records_locked_content_and_one_audit_entry[final_report]"
+        },
+        {
+          "id": "C-03.product_edit",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_locked_content_survives_product_edits"
+        }
+      ]
+    },
+    {
+      "id": "C-04",
+      "description": "Drafts are unavailable for never-reportable tickets; the advisory has no regulatory deadline/submission, cannot be recorded, and remains readable after resolution.",
+      "scenarios": [
+        {
+          "id": "C-04.received_early_warning",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_never_reportable_ticket_returns_409[received-early_warning]"
+        },
+        {
+          "id": "C-04.received_notification",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_never_reportable_ticket_returns_409[received-notification]"
+        },
+        {
+          "id": "C-04.received_final_report",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_never_reportable_ticket_returns_409[received-final_report]"
+        },
+        {
+          "id": "C-04.received_user_advisory",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_never_reportable_ticket_returns_409[received-user_advisory]"
+        },
+        {
+          "id": "C-04.invalid_early_warning",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_never_reportable_ticket_returns_409[invalid-early_warning]"
+        },
+        {
+          "id": "C-04.invalid_notification",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_never_reportable_ticket_returns_409[invalid-notification]"
+        },
+        {
+          "id": "C-04.invalid_final_report",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_never_reportable_ticket_returns_409[invalid-final_report]"
+        },
+        {
+          "id": "C-04.invalid_user_advisory",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_never_reportable_ticket_returns_409[invalid-user_advisory]"
+        },
+        {
+          "id": "C-04.not_actively_exploited_early_warning",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_never_reportable_ticket_returns_409[not_actively_exploited-early_warning]"
+        },
+        {
+          "id": "C-04.not_actively_exploited_notification",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_never_reportable_ticket_returns_409[not_actively_exploited-notification]"
+        },
+        {
+          "id": "C-04.not_actively_exploited_final_report",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_never_reportable_ticket_returns_409[not_actively_exploited-final_report]"
+        },
+        {
+          "id": "C-04.not_actively_exploited_user_advisory",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_never_reportable_ticket_returns_409[not_actively_exploited-user_advisory]"
+        },
+        {
+          "id": "C-04.advisory_metadata",
+          "test": "test_drafts.py::TestRemoteDrafts::test_ac08_complete_live_draft_matches_model_c[user_advisory]"
+        },
+        {
+          "id": "C-04.advisory_recording",
+          "test": "test_submissions.py::TestRemoteSubmissions::test_ac09_non_submittable_types_precede_bad_body_and_missing_actor[user_advisory]"
+        },
+        {
+          "id": "C-04.resolved_reads",
+          "test": "test_closures.py::TestRemoteClosures::test_ac10_all_three_reports_allow_one_atomic_close_and_remain_readable"
+        }
+      ]
+    },
+    {
+      "id": "D-01",
+      "description": "E1: Friday awareness produces the specified overdue early-warning and pending notification dates at Monday triage.",
+      "scenarios": [
+        {
+          "id": "D-01.example",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac03_model_d_exact_deadlines_and_statuses[E1]"
+        }
+      ]
+    },
+    {
+      "id": "D-02",
+      "description": "E2: Monday awareness produces the specified +24h and +72h deadlines.",
+      "scenarios": [
+        {
+          "id": "D-02.example",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac03_model_d_exact_deadlines_and_statuses[E2]"
+        }
+      ]
+    },
+    {
+      "id": "D-03",
+      "description": "E3: awareness after receipt starts deadlines from awareness, not receipt.",
+      "scenarios": [
+        {
+          "id": "D-03.example",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac03_model_d_exact_deadlines_and_statuses[E3]"
+        }
+      ]
+    },
+    {
+      "id": "D-04",
+      "description": "E4: a later fix produces exactly the specified +14-day UTC final-report deadline.",
+      "scenarios": [
+        {
+          "id": "D-04.example",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac03_model_d_exact_deadlines_and_statuses[E4]"
+        }
+      ]
+    },
+    {
+      "id": "D-05",
+      "description": "E5: a fix before awareness starts the final-report deadline from awareness as the pod example specifies.",
+      "scenarios": [
+        {
+          "id": "D-05.example",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac03_model_d_exact_deadlines_and_statuses[E5]"
+        }
+      ]
+    },
+    {
+      "id": "D-06",
+      "description": "E6: pending at the exact due time, overdue one second later.",
+      "scenarios": [
+        {
+          "id": "D-06.due",
+          "test": "test_phase3.py::TestRemotePhase3::test_initial_statuses_recalculate_at_exact_deadline"
+        },
+        {
+          "id": "D-06.overdue",
+          "test": "test_phase3.py::TestRemotePhase3::test_initial_statuses_recalculate_at_exact_deadline"
+        }
+      ]
+    },
+    {
+      "id": "D-07",
+      "description": "E7: the offset input normalizes to the specified whole-second UTC time/deadline; fractional input truncates and malformed timestamps are rejected without changes.",
+      "scenarios": [
+        {
+          "id": "D-07.E7_offset",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac14_timestamps_are_normalized[E7-offset]"
+        },
+        {
+          "id": "D-07.fraction_truncation",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac14_timestamps_are_normalized[fraction-truncation]"
+        },
+        {
+          "id": "D-07.bad_format",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac14_bad_timestamp_leaves_ticket_unchanged[bad-format]"
+        },
+        {
+          "id": "D-07.missing_seconds",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac14_bad_timestamp_leaves_ticket_unchanged[missing-seconds]"
+        },
+        {
+          "id": "D-07.missing_offset",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac14_bad_timestamp_leaves_ticket_unchanged[missing-offset]"
+        }
+      ]
+    },
+    {
+      "id": "D-08",
+      "description": "E8: awareness one second in the future returns 422, preserving received state and its lack of deadlines.",
+      "scenarios": [
+        {
+          "id": "D-08.future_awareness",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac04_rejected_triage_preserves_ticket[future-awareness]"
+        }
+      ]
+    },
+    {
+      "id": "X-01",
+      "description": "Ticket/list/draft status metadata agree; filters select exact tickets; urgency orders nearest unmet deadline first, nulls last, then receipt time and ID.",
+      "scenarios": [
+        {
+          "id": "X-01.metadata",
+          "test": null
+        },
+        {
+          "id": "X-01.filters",
+          "test": null
+        },
+        {
+          "id": "X-01.urgency",
+          "test": null
+        },
+        {
+          "id": "X-01.receipt_tie",
+          "test": null
+        },
+        {
+          "id": "X-01.id_tie",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "X-02",
+      "description": "The project API requires valid bearer auth except public health; the deployed HTTP endpoint refuses or redirects to HTTPS without sending credentials.",
+      "scenarios": [
+        {
+          "id": "X-02.auth_0_no_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[no-token-POST /tickets]"
+        },
+        {
+          "id": "X-02.auth_0_wrong_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[wrong-token-POST /tickets]"
+        },
+        {
+          "id": "X-02.auth_1_no_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[no-token-GET /tickets]"
+        },
+        {
+          "id": "X-02.auth_1_wrong_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[wrong-token-GET /tickets]"
+        },
+        {
+          "id": "X-02.auth_2_no_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[no-token-GET /tickets/{id}]"
+        },
+        {
+          "id": "X-02.auth_2_wrong_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[wrong-token-GET /tickets/{id}]"
+        },
+        {
+          "id": "X-02.auth_3_no_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[no-token-PATCH /tickets/{id}]"
+        },
+        {
+          "id": "X-02.auth_3_wrong_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[wrong-token-PATCH /tickets/{id}]"
+        },
+        {
+          "id": "X-02.auth_4_no_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[no-token-POST /tickets/{id}/triage]"
+        },
+        {
+          "id": "X-02.auth_4_wrong_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[wrong-token-POST /tickets/{id}/triage]"
+        },
+        {
+          "id": "X-02.auth_5_no_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[no-token-GET /tickets/{id}/reports/{type}]"
+        },
+        {
+          "id": "X-02.auth_5_wrong_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[wrong-token-GET /tickets/{id}/reports/{type}]"
+        },
+        {
+          "id": "X-02.auth_6_no_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[no-token-POST /tickets/{id}/reports/{type}/submission]"
+        },
+        {
+          "id": "X-02.auth_6_wrong_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[wrong-token-POST /tickets/{id}/reports/{type}/submission]"
+        },
+        {
+          "id": "X-02.auth_7_no_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[no-token-POST /tickets/{id}/close]"
+        },
+        {
+          "id": "X-02.auth_7_wrong_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[wrong-token-POST /tickets/{id}/close]"
+        },
+        {
+          "id": "X-02.auth_8_no_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[no-token-GET /tickets/{id}/audit]"
+        },
+        {
+          "id": "X-02.auth_8_wrong_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[wrong-token-GET /tickets/{id}/audit]"
+        },
+        {
+          "id": "X-02.auth_9_no_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[no-token-POST /test/reset]"
+        },
+        {
+          "id": "X-02.auth_9_wrong_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[wrong-token-POST /test/reset]"
+        },
+        {
+          "id": "X-02.auth_10_no_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[no-token-GET /test/clock]"
+        },
+        {
+          "id": "X-02.auth_10_wrong_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[wrong-token-GET /test/clock]"
+        },
+        {
+          "id": "X-02.auth_11_no_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[no-token-PUT /test/clock]"
+        },
+        {
+          "id": "X-02.auth_11_wrong_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[wrong-token-PUT /test/clock]"
+        },
+        {
+          "id": "X-02.auth_12_no_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[no-token-DELETE /test/clock]"
+        },
+        {
+          "id": "X-02.auth_12_wrong_token",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_every_protected_operation_rejects_unauthorized_requests[wrong-token-DELETE /test/clock]"
+        },
+        {
+          "id": "X-02.health",
+          "test": "test_phase3.py::TestRemotePhase3::test_ac15_health_is_public"
+        },
+        {
+          "id": "X-02.https",
+          "test": "test_phase3.py::test_ac15_plain_http_is_refused_or_redirected_to_https"
+        }
+      ]
+    },
+    {
+      "id": "X-03",
+      "description": "All five ticket-write operations require a valid X-Actor and successful changes record that actor without reporter leakage.",
+      "scenarios": [
+        {
+          "id": "X-03.create_actor",
+          "test": null
+        },
+        {
+          "id": "X-03.triage_actor",
+          "test": null
+        },
+        {
+          "id": "X-03.patch_actor",
+          "test": null
+        },
+        {
+          "id": "X-03.submission_actor",
+          "test": null
+        },
+        {
+          "id": "X-03.close_actor",
+          "test": null
+        },
+        {
+          "id": "X-03.recorded_actor",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "X-04",
+      "description": "For combined faults, errors follow 401, 413, 404, 400, 409, 422 and match the contract without changing application state.",
+      "scenarios": [
+        {
+          "id": "X-04.auth_size",
+          "test": null
+        },
+        {
+          "id": "X-04.size_resource",
+          "test": null
+        },
+        {
+          "id": "X-04.resource_schema",
+          "test": null
+        },
+        {
+          "id": "X-04.schema_state",
+          "test": null
+        },
+        {
+          "id": "X-04.state_rule",
+          "test": null
+        },
+        {
+          "id": "X-04.patch_matrix",
+          "test": null
+        },
+        {
+          "id": "X-04.triage_matrix",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "X-05",
+      "description": "A failure after saving state/snapshots, during audit or rendering, rolls the whole write back and leaves no audit gap.",
+      "scenarios": [
+        {
+          "id": "X-05.intake",
+          "test": null
+        },
+        {
+          "id": "X-05.triage",
+          "test": null
+        },
+        {
+          "id": "X-05.patch",
+          "test": null
+        },
+        {
+          "id": "X-05.submission",
+          "test": null
+        },
+        {
+          "id": "X-05.close",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "X-06",
+      "description": "Domain helpers remain independent of Django/database/clock reads, accept caller-supplied time, and do not mutate their inputs/results.",
+      "scenarios": [
+        {
+          "id": "X-06.purity",
+          "test": null
+        },
+        {
+          "id": "X-06.caller_time",
+          "test": null
+        },
+        {
+          "id": "X-06.immutability",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "X-07",
+      "description": "Reporter name/contact appear only in single-ticket detail and never in other HTTP responses or application logs.",
+      "scenarios": [
+        {
+          "id": "X-07.http_lifecycle",
+          "test": null
+        },
+        {
+          "id": "X-07.logs",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "X-08",
+      "description": "The console uses its own sign-in session, does not unlock the bearer-token API, reuses ticket rules, records the signed-in actor, and rolls back rejected console changes.",
+      "scenarios": [
+        {
+          "id": "X-08.session_boundary",
+          "test": null
+        },
+        {
+          "id": "X-08.actor",
+          "test": null
+        },
+        {
+          "id": "X-08.shared_rules",
+          "test": null
+        },
+        {
+          "id": "X-08.rejected_write",
+          "test": null
+        },
+        {
+          "id": "X-08.rollback",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "X-09",
+      "description": "Reset clears tickets/reports/audit but keeps test sessions and the fixed clock; clock reads remain fixed until changed/released; invalid clock input changes nothing.",
+      "scenarios": [
+        {
+          "id": "X-09.reset_tickets",
+          "test": null
+        },
+        {
+          "id": "X-09.reset_reports",
+          "test": null
+        },
+        {
+          "id": "X-09.reset_audit",
+          "test": null
+        },
+        {
+          "id": "X-09.retained_sessions",
+          "test": null
+        },
+        {
+          "id": "X-09.retained_clock",
+          "test": null
+        },
+        {
+          "id": "X-09.fixed_reads",
+          "test": null
+        },
+        {
+          "id": "X-09.clock_release",
+          "test": null
+        },
+        {
+          "id": "X-09.invalid_clock",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "X-10",
+      "description": "Across all timestamp-bearing project and clock responses, accepted RFC 3339 offsets normalize to UTC whole seconds with truncation, and invalid required timestamps are rejected without changes. Include receipt/awareness/fix/submission times, deadlines and audit times, not just E7's awareness field.",
+      "scenarios": [
+        {
+          "id": "X-10.receipt",
+          "test": null
+        },
+        {
+          "id": "X-10.awareness",
+          "test": null
+        },
+        {
+          "id": "X-10.fix",
+          "test": null
+        },
+        {
+          "id": "X-10.submission",
+          "test": null
+        },
+        {
+          "id": "X-10.deadlines",
+          "test": null
+        },
+        {
+          "id": "X-10.audit",
+          "test": null
+        },
+        {
+          "id": "X-10.clock",
+          "test": null
+        },
+        {
+          "id": "X-10.invalid_inputs",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "I-01",
+      "description": "AC-02: missing title, invalid source, client-set receipt time and malformed JSON are rejected with the prescribed 400 errors; a body above 65,536 bytes returns 413. Field-specific errors identify the bad field where applicable, and rejected intake changes no application data.",
+      "scenarios": [
+        {
+          "id": "I-01.missing_title",
+          "test": null
+        },
+        {
+          "id": "I-01.unknown_source",
+          "test": null
+        },
+        {
+          "id": "I-01.system_field",
+          "test": null
+        },
+        {
+          "id": "I-01.invalid_json",
+          "test": null
+        },
+        {
+          "id": "I-01.over_64_kb",
+          "test": null
+        },
+        {
+          "id": "I-01.unrelated_state_unchanged",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "I-02",
+      "description": "AC-13: send at least 500 malformed requests generated from the agreed OpenAPI document; receive no 5xx, validate each error against the specified format, and verify application data is unchanged.",
+      "scenarios": [
+        {
+          "id": "I-02.generated_count",
+          "test": null
+        },
+        {
+          "id": "I-02.no_server_errors",
+          "test": null
+        },
+        {
+          "id": "I-02.error_schema",
+          "test": null
+        },
+        {
+          "id": "I-02.unchanged_data",
+          "test": null
+        },
+        {
+          "id": "I-02.contract_settings",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "P-01",
+      "description": "AC-18: with 1,000 tickets, 200 sequential mixed requests meet the p95 <= 1 s target, with warm-up and cold-start results reported separately under an agreed protocol.",
+      "scenarios": [
+        {
+          "id": "P-01.benchmark",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "P-02",
+      "description": "AC-19: ticket, recorded-report content and audit survive a real service restart.",
+      "scenarios": [
+        {
+          "id": "P-02.restart_evidence",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "T-01",
+      "description": "Setup creates a unique nonempty session, passes the same ID to the target, waits for preparation, forwards setup errors, and leaves no runnable session on failure. Duplicate target IDs conflict.",
+      "scenarios": [
+        {
+          "id": "T-01.unique_id",
+          "test": null
+        },
+        {
+          "id": "T-01.same_id",
+          "test": null
+        },
+        {
+          "id": "T-01.ready",
+          "test": null
+        },
+        {
+          "id": "T-01.failure_not_runnable",
+          "test": null
+        },
+        {
+          "id": "T-01.forwarded_failure",
+          "test": null
+        },
+        {
+          "id": "T-01.duplicate_id",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "T-02",
+      "description": "A prepared session runs once, waits for completion, rejects reuse, and exposes the same immutable stored report; invalid requests do not consume it and pending report lookups return 409.",
+      "scenarios": [
+        {
+          "id": "T-02.once",
+          "test": null
+        },
+        {
+          "id": "T-02.invalid_not_consumed",
+          "test": null
+        },
+        {
+          "id": "T-02.pending_report",
+          "test": null
+        },
+        {
+          "id": "T-02.stored_report",
+          "test": null
+        },
+        {
+          "id": "T-02.waits",
+          "test": null
+        },
+        {
+          "id": "T-02.immutable_report",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "T-03",
+      "description": "Every planned test appears once with nonempty ID/message and the right pass/fail/error/skip meaning; aborts retain outcomes, and errors distinguish tester/system/communication/unknown. A finished suite returns 200 even with target failures; a tester abort returns 500 and retains a report.",
+      "scenarios": [
+        {
+          "id": "T-03.planned_once",
+          "test": null
+        },
+        {
+          "id": "T-03.outcomes",
+          "test": null
+        },
+        {
+          "id": "T-03.sources",
+          "test": null
+        },
+        {
+          "id": "T-03.retained_abort",
+          "test": null
+        },
+        {
+          "id": "T-03.finished_status",
+          "test": null
+        },
+        {
+          "id": "T-03.aborted_status",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "T-04",
+      "description": "Every suite report carries valid code/component/system measures; same-team reports additionally carry this model measure with the approved version/mapping, while cross-team reports omit it. Counts are bounded or both null with a reason; coverage is not pass rate.",
+      "scenarios": [
+        {
+          "id": "T-04.code",
+          "test": null
+        },
+        {
+          "id": "T-04.component",
+          "test": null
+        },
+        {
+          "id": "T-04.system",
+          "test": null
+        },
+        {
+          "id": "T-04.own_model",
+          "test": null
+        },
+        {
+          "id": "T-04.cross_team_omission",
+          "test": null
+        },
+        {
+          "id": "T-04.valid_measures",
+          "test": null
+        },
+        {
+          "id": "T-04.unavailable_basis",
+          "test": null
+        }
+      ]
+    },
+    {
+      "id": "T-05",
+      "description": "Distinct tester sessions cannot unintentionally reset, change the clock, or overwrite the target state/coverage of an active run. The agreed policy protects preparation, execution, coverage retrieval and cleanup, including abort/lost-response paths, and documents recovery after interruptions.",
+      "scenarios": [
+        {
+          "id": "T-05.distinct_sessions",
+          "test": null
+        },
+        {
+          "id": "T-05.preparation",
+          "test": null
+        },
+        {
+          "id": "T-05.execution",
+          "test": null
+        },
+        {
+          "id": "T-05.coverage_retrieval",
+          "test": null
+        },
+        {
+          "id": "T-05.normal_cleanup",
+          "test": null
+        },
+        {
+          "id": "T-05.abort_cleanup",
+          "test": null
+        },
+        {
+          "id": "T-05.interruption_recovery",
+          "test": null
+        }
+      ]
+    }
+  ]
+}

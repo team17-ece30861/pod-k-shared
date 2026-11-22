@@ -2,8 +2,8 @@
 
 *Published copy of Team 17's system documentation, refreshed at each Team 17 release.*
 
-What Team 17's CRA reporting service does at the end of Phase 4: its models, interfaces,
-functionality, validation, and known limitations. Last updated 2026-11-01 (US Eastern;
+What Team 17's CRA reporting service does at the end of Phase 5: its models, interfaces,
+functionality, validation, and known limitations. Last updated November 22, 2026 (US Eastern;
 times in the tables below are UTC). The Phase 3 version is kept as a record in
 [Team 17's repository](https://github.com/team17-ece30861/cra-service/blob/main/docs/phase3.md).
 
@@ -17,7 +17,7 @@ where the contract is silent, is in [TESTING.md](TESTING.md). The automated test
 
 | Deployment | Runs | What it has |
 |---|---|---|
-| Evaluation deployment (Orbit, used by Team 21 and the course staff) | `be9572b`, launched 2026-11-01 20:48 UTC | Every Phase 3 and Phase 4 API operation, and the console. The full tester passed 222 of 222 against it the same day. |
+| Evaluation deployment (Orbit, used by Team 21 and the course staff) | `c875f14` (revision `team17-prod-00011-qqg`, then `00012-wnv` after the AC-19 restart demo), launched 2026-11-22 17:12 UTC | Every API operation (contract 0.3.0), the console, and the course's testing interface. Our deployed tester passed 241 of 241 against it the same day. |
 | Development deployment (Launchpad) | `main` | The same code as Orbit until the next merge; every merge to `main` deploys here first. |
 
 ## Functionality
@@ -89,7 +89,7 @@ part of the shared spec, so it changes neither the contract nor what Team 21 tes
 | Operation | Status | Notes |
 | --- | --- | --- |
 | `GET /health` | Delivered | Public. Doesn't check the database. |
-| `POST /tickets` | Delivered | A future `fix.available_at` is still accepted (Q7, see Known limitations). |
+| `POST /tickets` | Delivered | A `fix.available_at` later than now returns 422 and stores nothing (Q7, contract 0.3.0). `member_states` may be exactly `["unknown"]` (Q9). |
 | `GET /tickets` | Delivered | Nearest unmet deadline (`next_due_at`) first, tickets with none last; ties go to the oldest `received_at`, then `id` (Q2). `state` and `obligation_status` filters combine; `obligation_status` matches if any of the three reports has that status. Unknown values return 400. |
 | `GET /tickets/{id}` | Delivered | The only response with reporter details. |
 | `PATCH /tickets/{id}` | Delivered | Merges nested objects one level deep; lists are replaced whole; `null` clears optional fields. A PATCH that changes nothing returns 200 with no audit entry (Q6). |
@@ -200,7 +200,7 @@ erDiagram
 
 ## Validation
 
-**Acceptance criteria covered by the automated tester** ([tester/](tester/README.md), 222
+**Acceptance criteria covered by the automated tester** ([tester/](tester/README.md), 241
 tests, run over HTTPS and inside our CI):
 
 | Criterion | What's checked |
@@ -211,6 +211,7 @@ tests, run over HTTPS and inside our CI):
 | AC-04 | Missing or future awareness, missing reason, and re-triage are rejected; ticket unchanged. |
 | AC-05 | Both non-reportable decisions close the ticket; changes return 409; reads work. |
 | AC-06 | Model D E6 step by step, reports recorded on time and late, a report recorded exactly at its due time, the clock moved back, and an earlier awareness making a recorded report late (Q4). |
+| AC-07 | An awareness edit recalculates every deadline and adds one audit entry; setting a fix time creates the final-report deadline at once; a rejected edit leaves the ticket, drafts, list and audit log unchanged. |
 | AC-08 | All four drafts match Model C as fields are filled; never-reportable tickets return 409; no reporter details in any draft. |
 | AC-09 | Recording locks the content and adds one audit entry; 409 for a missing previous report or a duplicate, checked before 422; missing fields and a bad `submitted_at` reported together; the interval is inclusive. |
 | AC-10 | Closing after all three reports is one atomic change; closing with reports outstanding or on a never-reportable ticket returns 409; a resolved ticket rejects every change. |
@@ -223,14 +224,24 @@ tests, run over HTTPS and inside our CI):
 
 Every response is also checked against `openapi.yaml`. Expected values come from the pod
 spec, worked out by hand, never from the service's output. AC-07 (updates) is covered by
-local integration tests in CI. AC-13 (500 generated malformed requests) moved to Phase 5,
-and AC-18 and AC-19 are planned for Phase 5. The pod's shared Model D test file (E1 to E8)
+the HTTP tester since Phase 5. AC-13 (at least 500 generated malformed requests) and AC-18
+(performance with 1,000 tickets) have their own tools in [tester/](tester/README.md), and
+AC-19 (data survives a restart) is a recorded demonstration; their Phase 5 results are in
+the recorded runs below. The pod's shared Model D test file (E1 to E8)
 is in this repository ([tests/](../tests/README.md)) and has been checked by Team 21.
 
 **Recorded runs:**
 
 | Run | Target | Result | When |
 | --- | --- | --- | --- |
+| Launch to Orbit | Evaluation deployment, `c875f14` (revision `team17-prod-00011-qqg`) | Tests, migrations, deploy, and health check passed | 2026-11-22 17:12 UTC |
+| Deployed tester, own system (241 tests) | Evaluation deployment at `c875f14` | 241 passed, 0 failed. `coverage.model` 20 of 44 design requirements, system 16 of 19 acceptance criteria | 2026-11-22 17:13 to 17:20 UTC |
+| AC-18 performance (`acceptance/perf.py`) | Evaluation deployment at `c875f14` | PASS: 1,000 tickets, 200 requests one at a time, p95 736 ms (p50 243 ms, max 1,750 ms), 0 unexpected responses | 2026-11-22 17:20 to 17:26 UTC |
+| AC-13 malformed requests (`acceptance/malformed.py`, macOS corpus) | Evaluation deployment at `c875f14` | 683 requests, 683 distinct invalid inputs, 133 fault categories: 0 server errors, 0 contract mismatches, stored data unchanged | 2026-11-22 17:26 to 17:29 UTC |
+| Team 21's published tester (17 tests, AC-01 to AC-17), run by Team 17 | Evaluation deployment at `c875f14` | 17 of 17 passed, including 500 malformed requests for AC-13 with no server errors | 2026-11-22 17:30 UTC |
+| AC-19 restart demo (`scripts/restart_demo.sh prod`, recorded) | Evaluation deployment, revision `team17-prod-00011-qqg` replaced by `team17-prod-00012-wnv` | Ticket, early-warning report, and audit log read back byte-for-byte unchanged | 2026-11-22 18:14 UTC |
+| AC-18 performance | Development deployment after #116 | PASS: p95 828 ms (the run before #116 failed at p95 1,373 ms) | 2026-11-22 16:40 UTC |
+| CI at `c875f14` | Linux, Python 3.12, PostgreSQL 18 | 1,684 tests, lint, migration and Django checks passed ([run](https://github.com/team17-ece30861/cra-service/actions/runs/45046366880)) | 2026-11-22 |
 | Acceptance suite (222 tests) | Development deployment at `ec62594` | 222 passed, 0 failed | 2026-11-01 15:56 to 16:15 UTC |
 | Acceptance suite (222 tests) | Team 21's deployment | 202 of 222 passed. All but one failure trace to specific contract or Model C text; the remaining one is a spec gap (whether a 422 must list every problem) | 2026-11-01 16:57 to 17:03 UTC |
 | Launch to Orbit | Evaluation deployment, `c1133ac` (API only) | Tests, migrations, deploy, and health check passed | 2026-11-01 17:24 UTC |
@@ -243,8 +254,8 @@ is in this repository ([tests/](../tests/README.md)) and has been checked by Tea
 | CI (every PR) | Same | Full test suite, lint, migration and Django checks; nothing merges or deploys unless it passes | Ongoing |
 
 Team 17 runs its suite against the development deployment and Team 21's deployment. It ran
-against the evaluation deployment once, right after the Phase 4 release, for the report (as in
-Phase 3). The Phase 3 runs (55 of 55 on both deployments) are
+against the evaluation deployment right after each release (Phases 3, 4 and 5), for the report.
+Our suite's final run against Team 21's deployment is in the Phase 5 report. The Phase 3 runs (55 of 55 on both deployments) are
 recorded in the [Phase 3 version](https://github.com/team17-ece30861/cra-service/blob/main/docs/phase3.md).
 
 **GenAI corrections caught by checking:** an independent AI session, one that hadn't drawn
@@ -260,24 +271,25 @@ also had an independent agent review posted on its pull request before it merged
   a time, and finish with `POST /test/reset` and `DELETE /test/clock`.
 - **Hosting performance (LIM-02):** the service scales to zero, so the first request after
   idle takes about 3 to 6 seconds, plus about 1.5 seconds for the first database read. It
-  runs one instance with two workers and a 30-minute request timeout (so a full deployed-tester run fits; one run holds one worker while it lasts). The 1-second target
-  with 1,000 tickets (REQ-17) hasn't been measured on the deployed service yet (Phase 5).
-  Send `GET /health` and one authenticated read before timing anything.
-- **Spending cap and alerting (LIM-03):** a $10 spending cap stops the service until we
-  lift it by hand, and there's no automated alert for server errors yet (moved to
-  Phase 5). If the service stops responding, email Team 17.
-- **Final report clock (LIM-04):** the final report deadline starts only from the recorded
-  fix time, while the CRA starts it when any corrective or mitigating measure is available
-  (Art. 14(2)(c)), so a workaround released before the fix can leave our due time later
-  than the regulation requires. The pod hasn't answered this yet (Q8). Until then, record
-  the time of the first mitigating measure as the fix time.
-- **Agreed changes not in force yet (LIM-05):** two answers Team 21 agreed to need contract
-  changes, so they wait for their own contract pull requests (Phase 5): a ticket submitted
-  with a future fix time is still accepted with 201 (Q7), and an early warning still
-  requires member states and affected versions, with no "unknown" option (Q9).
-- **Contract text on no-change updates (LIM-06):** until the contract freeze pull request
-  (#14 in this repository) merges, the contract text says every successful update adds an audit
-  entry, but ours adds none when the update changes nothing, as agreed with Team 21 (Q6).
+  runs one instance with two workers and a 30-minute request timeout (so a full
+  deployed-tester run fits; one run holds one worker while it lasts, and a second run is
+  refused with 409). Each worker keeps its database connection for 5 minutes and API
+  responses are gzipped for clients that ask, which cut the server time of a simple read
+  from about 190 ms to about 40 ms on our development deployment (2026-11-22). The AC-18
+  measurement (1,000 tickets, 200 requests, REQ-17) is in the Phase 5 report. Send
+  `GET /health` and one authenticated read before timing anything.
+- **Spending cap (LIM-03):** a $10 spending cap stops the service until we lift it by
+  hand. Any server error (5xx) now emails Team 17 automatically, but a stopped service
+  returns nothing to alert on. If the service stops responding, email Team 17.
+- **Final report clock (LIM-04):** the final report deadline starts from `fix.available_at`,
+  which contract 0.3.0 defines as when the first corrective or mitigating measure became
+  available (Art. 14(2)(c), Q8). The system can't tell a fix from a workaround, so record
+  the workaround's release time there if it came first. See
+  [Team 17's CRA review](https://github.com/team17-ece30861/cra-service/blob/main/docs/reports/risk1-cra-review.md).
+- **Shared contract copy behind ours (LIM-05):** this service follows contract 0.3.0 (Q7: a
+  future fix time on submit is 422; Q9: `member_states` may be exactly `["unknown"]`; Q8
+  wording). The shared copy in `pod-k-shared` changes only when Team 21 approves the 0.3.0
+  pull request, so until then it still describes the older behavior.
 - **Empty lists in mixed updates (LIM-07):** an update that changes a real field and also
   sends an empty list for a list that was never set records that list as a change in the
   audit entry, even though no read shows a difference (Phase 5).
@@ -289,11 +301,14 @@ also had an independent agent review posted on its pull request before it merged
 - **GET with a body (LIM-10):** Google Cloud Run's front end rejects any `GET` request that
   has a body before it reaches the service, with a dropped connection or an HTML 400
   instead of a problem+json error. Don't send bodies on `GET`.
-- **Test gaps (LIM-11):** the 500 generated malformed requests (AC-13) haven't been run, the
-  update cases (AC-07) are tested in our CI but not yet in the HTTP tester, and a few error
-  codes have no test (404 and 413 on PATCH and triage, 405 on the audit log in the
-  generated table). No tests are currently failing.
-- **Console sign-in (LIM-12):** the console has no limit on failed sign-ins. Low; Phase 5.
-- **Deployed tester cleanup (LIM-13):** our deployed tester leaves the target's test clock
-  fixed and the run's test data in place. Call `POST /test/reset` and `DELETE /test/clock`
-  after a run. Low; Phase 5.
+- **Test gaps (LIM-11):** fixed in Phase 5. The update cases (AC-07) and 404 and 413 on
+  PATCH and triage are in the HTTP tester, and at least 500 generated malformed requests
+  (AC-13) run in CI and against a deployment with `python -m acceptance.malformed`.
+  405 on the audit log is checked by its own tester case rather than in the generated
+  operation table.
+- **Console sign-in (LIM-12):** fixed in Phase 5. Five failed sign-ins for one username
+  within 15 minutes lock it for 15 minutes; `POST /test/reset` doesn't clear the lock.
+- **Deployed tester cleanup (LIM-13):** fixed in Phase 5. After each run, also after an
+  abort, our deployed tester calls the target's `DELETE /test/clock` and `POST /test/reset`.
+  The exception: a run the service took for cut off (no heartbeat for 3 minutes) stops
+  without cleaning up, so call both yourself if a run's report says it was cut off.

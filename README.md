@@ -46,6 +46,7 @@ passes, so no team marks its own work verified.
 | `GET /tickets/{id}/reports/{type}` (drafts) | 4 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
 | `POST /tickets/{id}/reports/{type}/submission` | 4 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
 | `POST /tickets/{id}/close` | 4 | ✅ Verified by Team 21, 2026-11-01 | ✅ Verified by Team 17, 2026-11-01 |
+| Contract 0.3.0: `POST /tickets` 422 for a future fix time (Q7), `member_states: ["unknown"]` (Q9), 422 lists every problem | 5 | 🟡 Live since the Phase 5 launch, 2026-11-22 (Orbit at `c875f14`) | Team 21 to fill |
 
 ### Milestones
 
@@ -59,7 +60,9 @@ other team.
 | Own Phase 3 suite passes against own deployment | Done, 55/55, 2026-10-18 | ⬜ |
 | Other team's Phase 3 suite passes against this deployment | Done, 2026-11-01 (Team 21's suite) | Done, 55/55, 2026-10-18 (Team 17's suite) |
 | Other team's Phase 4 suite passes against this deployment | Done, 17/17, 2026-11-01 (Team 21's suite) | Done, 222/222, 2026-11-01 (Team 17's suite) |
-| Phase 3 operations frozen in the shared contract (both teams) | ⬜ | ⬜ |
+| Phase 3 operations frozen in the shared contract (both teams) | Done, 2026-11-22 (#14) | ⬜ |
+| Own AC-18 performance run (1,000 tickets, p95 ≤ 1 s) passes against own deployment | ✅ Passed on Orbit at `c875f14`, 2026-11-22: p95 736 ms over 200 requests with 1,000 tickets, 0 unexpected | Team 21 to fill |
+| Other team's Phase 5 suite passes against this deployment | ⬜ | ⬜ |
 
 ### Team 17's deployment
 

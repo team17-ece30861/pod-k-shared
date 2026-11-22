@@ -6,6 +6,7 @@ from copy import deepcopy
 import pytest
 
 from acceptance.draft_cases import FIELDS, FIXED, REPORTER, create_reportable, read_draft
+from acceptance.model_coverage import OracleChecks, model_scenario
 from acceptance.submission_cases import REPORT_TYPES, audit_log, submit_report
 
 UNKNOWN = "00000000-0000-0000-0000-000000000000"
@@ -50,7 +51,9 @@ class ClosureChecks:
             submit_report(service, ticket_id, report_type)
         before = closure_state(service, ticket_id)
         close_ticket(service, ticket_id, 409)
-        assert closure_state(service, ticket_id) == before
+        after = closure_state(service, ticket_id)
+        with model_scenario(f"A-06.outstanding_{submitted_count}"):
+            assert after == before
 
     def test_ac10_all_three_reports_allow_one_atomic_close_and_remain_readable(self, service):
         ticket_id = ready_to_close(service)
@@ -60,9 +63,17 @@ class ClosureChecks:
         assert closed["resolution"] == "resolved"
         assert "reporter" not in closed
         after = closure_state(service, ticket_id)
-        assert after["ticket"]["state"] == "closed"
-        assert after["ticket"]["resolution"] == "resolved"
-        assert after["reports"] == before["reports"]
+        model_checks = OracleChecks()
+        model_checks.equal("close response state", closed["state"], "closed")
+        model_checks.equal("close response resolution", closed["resolution"], "resolved")
+        model_checks.equal("stored state", after["ticket"]["state"], "closed")
+        model_checks.equal("stored resolution", after["ticket"]["resolution"], "resolved")
+        with model_scenario("A-06.resolved", comparisons=model_checks.results):
+            assert all(model_checks.results), model_checks.summary()
+        with model_scenario("A-07.readable_reports"):
+            assert after["reports"] == before["reports"]
+        with model_scenario("C-04.resolved_reads"):
+            assert after["reports"]["user_advisory"] == before["reports"]["user_advisory"]
         assert after["audit"][:-1] == before["audit"]
         entry = after["audit"][-1]
         assert entry["seq"] == 6
@@ -83,7 +94,12 @@ class ClosureChecks:
             service.triage(ticket_id, {"decision": state, "reason": "Reviewed"})
         before = closure_state(service, ticket_id)
         close_ticket(service, ticket_id, 409)
-        assert closure_state(service, ticket_id) == before
+        after = closure_state(service, ticket_id)
+        with model_scenario("A-06.state_" + state):
+            assert after == before
+        if state != "received":
+            with model_scenario("A-03.resolution_" + state):
+                assert after == before
 
     @pytest.mark.parametrize(
         "method,suffix,body",
@@ -114,7 +130,19 @@ class ClosureChecks:
         if "/reports/" in suffix:
             template = "/tickets/{id}/reports/{type}/submission"
         service.expect(method, f"/tickets/{ticket_id}{suffix}", 409, template=template, body=body)
-        assert closure_state(service, ticket_id) == before
+        after = closure_state(service, ticket_id)
+        if method == "PATCH":
+            change = "awareness" if "aware_at" in body else "details"
+        else:
+            change = {
+                "/triage": "triage",
+                "/reports/early_warning/submission": "early",
+                "/reports/notification/submission": "notification",
+                "/reports/final_report/submission": "final",
+                "/close": "close",
+            }[suffix]
+        with model_scenario("A-07." + change):
+            assert after == before
 
     @pytest.mark.parametrize(
         "actor", [None, "", "   ", "x" * 201], ids=["absent", "empty", "blank", "long"]

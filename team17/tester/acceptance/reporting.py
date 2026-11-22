@@ -16,7 +16,11 @@ def _conformance(expected: list[int], checks: list[tuple[dict, str]]) -> dict:
     inconclusive = set()
     for check, outcome in checks:
         status = check["expected_status"]
-        if not check["conforms"]:
+        if check.get("actual_status") is None:
+            # No response (connection failure, timeout): nothing about the target was
+            # observed, so the check is inconclusive rather than a failure.
+            inconclusive.add(status)
+        elif not check["conforms"]:
             failed.add(status)
         elif outcome == "passed":
             passed.add(status)
@@ -51,7 +55,7 @@ def operation_statuses(document: dict, results: Iterable[dict]) -> list[dict]:
 
     Passing observations also require a passing enclosing test and completed
     teardown. A valid response from an unfinished, failed or skipped test is
-    inconclusive, not conformance proof.
+    inconclusive, not conformance proof. So is a check that got no response.
     Requirement IDs come from operation descriptions, except clock read/release
     use REQ-16 from docs/spec.md where their descriptions omit the requirement.
     """
@@ -135,7 +139,7 @@ def render_operation_table(rows: list[dict]) -> str:
             "not every behavior.",
             "Untested statuses are not passes. Unfinished/failed/skipped tests "
             "never count as passing evidence.",
-            "Fixture setup/reset calls and raw transport calls are excluded. "
+            "Successful fixture setup/reset calls and raw transport calls are excluded. "
             "No code coverage is inferred.",
         ]
     )

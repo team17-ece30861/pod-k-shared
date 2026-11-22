@@ -5,6 +5,8 @@ from copy import deepcopy
 
 import pytest
 
+from acceptance.model_coverage import OracleChecks, model_scenario
+
 FIXED = "2026-10-05T09:00:00Z"
 REPORTER = "private-draft-reporter@example.invalid"
 PRODUCT = {"manufacturer": "Acme", "name": "Router", "affected_versions": ["1.0"]}
@@ -126,17 +128,34 @@ class DraftChecks:
     def test_ac08_complete_live_draft_matches_model_c(self, service, report_type):
         ticket_id = create_reportable(service, **deepcopy(FIELDS))
         draft = read_draft(service, ticket_id, report_type)
-        assert draft == {
-            "ticket_id": ticket_id,
-            "type": report_type,
-            "status": None if report_type == "user_advisory" else "pending",
-            "due_at": DUE[report_type],
-            "submitted_at": None,
-            "reference": None,
-            "content": {"ticket_id": ticket_id, "aware_at": FIXED, **CONTENT[report_type]},
-            "missing_fields": [],
-        }
-        assert REPORTER not in json.dumps(draft)
+        model_checks = OracleChecks()
+        model_checks.equal(
+            "draft",
+            draft,
+            {
+                "ticket_id": ticket_id,
+                "type": report_type,
+                "status": None if report_type == "user_advisory" else "pending",
+                "due_at": DUE[report_type],
+                "submitted_at": None,
+                "reference": None,
+                "content": {"ticket_id": ticket_id, "aware_at": FIXED, **CONTENT[report_type]},
+                "missing_fields": [],
+            },
+        )
+        model_checks.true("draft leaves out reporter details", REPORTER not in json.dumps(draft))
+        with model_scenario("C-01." + report_type, comparisons=model_checks.results):
+            assert all(model_checks.results), model_checks.summary()
+        if report_type == "user_advisory":
+            model_checks = OracleChecks()
+            model_checks.equal(
+                "advisory status, due_at and submitted_at",
+                [draft["status"], draft["due_at"], draft["submitted_at"]],
+                [None, None, None],
+            )
+            model_checks.equal("advisory reference", draft["reference"], None)
+            with model_scenario("C-04.advisory_metadata", comparisons=model_checks.results):
+                assert all(model_checks.results), model_checks.summary()
 
     def test_ac08_missing_fields_follow_each_ticket_update(self, service):
         ticket_id = create_reportable(
@@ -178,11 +197,17 @@ class DraftChecks:
         audit_path = f"/tickets/{ticket_id}/audit"
         audit = service.expect("GET", audit_path, 200, template="/tickets/{id}/audit")
         for report_type in REQUIRED:
-            assert read_draft(service, ticket_id, report_type) == read_draft(
-                service, ticket_id, report_type
-            )
-        assert service.get(ticket_id) == before
-        assert service.expect("GET", audit_path, 200, template="/tickets/{id}/audit") == audit
+            first = read_draft(service, ticket_id, report_type)
+            second = read_draft(service, ticket_id, report_type)
+            with model_scenario("C-03.repeated_" + report_type):
+                assert first == second
+        after = service.get(ticket_id)
+        after_audit = service.expect("GET", audit_path, 200, template="/tickets/{id}/audit")
+        model_checks = OracleChecks()
+        model_checks.equal("ticket after draft reads", after, before)
+        model_checks.equal("audit after draft reads", after_audit, audit)
+        with model_scenario("C-03.no_read_mutation", comparisons=model_checks.results):
+            assert all(model_checks.results), model_checks.summary()
 
     @pytest.mark.parametrize("report_type", REQUIRED)
     @pytest.mark.parametrize("state", ["received", "invalid", "not_actively_exploited"])
@@ -192,7 +217,9 @@ class DraftChecks:
             service.triage(ticket["id"], {"decision": state, "reason": "Reviewed"})
         before = service.get(ticket["id"])
         read_draft(service, ticket["id"], report_type, 409)
-        assert service.get(ticket["id"]) == before
+        after = service.get(ticket["id"])
+        with model_scenario(f"C-04.{state}_{report_type}"):
+            assert after == before
 
     @pytest.mark.parametrize("unknown_id", ["00000000-0000-0000-0000-000000000000", "not-an-id"])
     def test_ac08_unknown_ticket_returns_404(self, service, unknown_id):
