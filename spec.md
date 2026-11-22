@@ -3,7 +3,8 @@
 What every Pod K system must accept and return, and what counts as correct behavior. This
 is the specification Teams 17 and 21 agreed on September 25, 2026 (Phase 2 report,
 Sections 2 to 6), transcribed so it can be read and linked without the PDF. Nothing here
-is new.
+is new, except changes the pod agreed later by pull request, marked with their question
+(Q7 to Q9, contract 0.3.0).
 
 - **Interface contract:** [`openapi.yaml`](openapi.yaml). If this file and the contract
   disagree about an interface detail, the contract wins.
@@ -34,10 +35,10 @@ tickets, English JSON, all times UTC, EU member states only.
 
 | ID | Requirement (short form) |
 |---|---|
-| REQ-01 | **Intake.** A valid ticket is stored in state `received` with a unique ID and receipt time = current system time. Returns 201 with the ticket. |
+| REQ-01 | **Intake.** A valid ticket is stored in state `received` with a unique ID and receipt time = current system time. Returns 201 with the ticket. A fix time later than now is rejected (422, Q7). |
 | REQ-02 | **Reportable.** While `received`, triage as actively exploited with an awareness time and reason moves it to `reportable` and starts deadlines from the awareness time. Awareness may be earlier than receipt but not later than now. |
 | REQ-03 | **Not reportable.** While `received`, triage as not actively exploited or invalid, with a reason, closes it. No deadlines apply. |
-| REQ-04 | **Deadlines.** Early warning = awareness + 24 h. Notification = awareness + 72 h. Once a fix time is recorded, final report = fix + 14 days, or awareness + 14 days if the fix came first. Exact elapsed UTC hours, no weekend, holiday, or DST adjustment. |
+| REQ-04 | **Deadlines.** Early warning = awareness + 24 h. Notification = awareness + 72 h. Once a fix time is recorded, final report = fix + 14 days, or awareness + 14 days if the fix came first. The fix time (`fix.available_at`) is when the first corrective or mitigating measure became available, so a workaround released before the fix counts (Art. 14(2)(c), Q8). Exact elapsed UTC hours, no weekend, holiday, or DST adjustment. |
 | REQ-05 | **Obligation status.** Each of the three reports has one status based on the current time: `not_applicable` (ticket not reportable), `awaiting_fix` (final report, no fix time), `pending` (not submitted, not yet due), `overdue` (not submitted, past due), `submitted` (on time), `submitted_late`. |
 | REQ-06 | **Updates.** While not closed, details can be updated. Changing the awareness time needs a reason and is allowed only while `reportable`. Neither awareness nor fix time may be later than now. Any change to either recalculates deadlines immediately. |
 | REQ-07 | **Drafts.** For early warning, notification, final report, and user advisory, return a draft built from ticket fields plus the list of missing required fields (Model C). |
@@ -45,7 +46,7 @@ tickets, English JSON, all times UTC, EU member states only.
 | REQ-09 | **Closure.** While `reportable`, close only after all three reports are submitted. A closed ticket rejects every change but can still be read. |
 | REQ-10 | **Listing.** List tickets, filterable by state and by report status, nearest unmet deadline first. |
 | REQ-11 | **Audit log.** Every request that changes a ticket adds an entry: time, person, action, old and new values, reason. Entries are never edited or deleted, except by test reset. |
-| REQ-12 | **Errors.** Invalid or not-allowed requests are rejected with the Section 5 status code and format, name the field at fault, and change nothing. Invalid input never causes a 5xx. |
+| REQ-12 | **Errors.** Invalid or not-allowed requests are rejected with the Section 5 status code and format, name the field at fault, and change nothing. A 422 lists every business-rule problem found, not only the first. Invalid input never causes a 5xx. |
 | REQ-13 | **Time format.** Accept RFC 3339 with any UTC offset. Return every timestamp in UTC, to the second. |
 | REQ-14 | **Auth and HTTPS.** HTTPS only. Every request except the health check needs a valid token. Every change names the person making it (`X-Actor`). |
 | REQ-15 | **Reporter confidentiality.** Reporter name and contact appear only in the single-ticket response. Never in lists, drafts, advisories, logs, or error messages. |
@@ -103,8 +104,8 @@ once a ticket is reportable.
 | Ticket field | Early warning | Notification | Final report | User advisory | Basis |
 |---|---|---|---|---|---|
 | `product.manufacturer`, `product.name` | R | R | R | R | Art. 14(2)(b), 14(8) |
-| `product.affected_versions` (at least one) | R | R | R | R | Art. 14(2)(b), 14(8) |
-| `member_states` (at least one) | R | R | R | — | Art. 14(2)(a) |
+| `product.affected_versions` (at least one; `"unknown"` is a valid entry, Q9) | R | R | R | R | Art. 14(2)(b), 14(8) |
+| `member_states` (at least one, or exactly `["unknown"]`, Q9) | R | R | R | — | Art. 14(2)(a) |
 | `vulnerability.cve_id` | — | O | O | O | — |
 | `vulnerability.description` | — | R | R | R | Art. 14(2)(b), (c)(i); 14(8) |
 | `exploit.description` | — | R | R | — | Art. 14(2)(b) |
@@ -136,7 +137,9 @@ Fixed assumptions so teams don't diverge: deadlines are exact UTC hours; all thr
 reports are always required (even though Art. 14(2)(b)-(c) lets one be skipped when the
 information was already given); a fix released before awareness starts the 14-day clock
 at awareness (E5); every notification field is required even though the regulation says
-"as available", so incomplete reports are flagged instead of skipped.
+"as available", so incomplete reports are flagged instead of skipped. Because Art. 14(2)(a)
+asks for Member States only "where applicable", `member_states` may be exactly
+`["unknown"]` (never mixed with codes, which is a 400), and that counts as filled in (Q9).
 
 ## Acceptance criteria
 
@@ -171,7 +174,8 @@ The contract is [`openapi.yaml`](openapi.yaml). In short:
 
 - Errors: 400 schema, 401 token, 404 unknown ticket or report type, 405 method not
   allowed, 409 not allowed in the current state, 413 body over 64 KB, 422 valid request
-  that breaks a rule. When several apply: **401, 413, 404, 400, 409, 422**.
+  that breaks a rule (listing every rule problem found). When several apply: **401, 413,
+  404, 400, 409, 422**.
 - Submit, triage, update, record submission, and close each add exactly one audit entry
   on success. Reads change nothing. A failed request changes nothing.
 - Testing: each team publishes its base URL in the shared pod file and sends its token
